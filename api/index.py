@@ -1,195 +1,128 @@
-"""
-Versão refatorada do endpoint Mercado Livre.
-Melhorias:
-- Paginação completa de pedidos e anúncios
-- Session reutilizada
-- Busca de itens em lote
-- Retry simples para 429/timeout
-- Timezone preservado
-- JSON UTF-8
-- Relatório ordenado
-"""
-
+import os
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
-from zoneinfo import ZoneInfo
 import json
-import time
 import requests
 
-ACCESS_TOKEN = "COLOQUE_SEU_ACCESS_TOKEN"
-
-HEADERS = {
-    "Authorization": f"Bearer {ACCESS_TOKEN}",
-    "User-Agent": "EstoqueFull/2.0"
-}
-
-session = requests.Session()
-session.headers.update(HEADERS)
-
-TZ = ZoneInfo("America/Sao_Paulo")
-
-ESTOQUE_MISTURADO = {
-    "MLB5579973070",
-    "MLB4286968229",
-    "MLB4649295965",
-    "MLB4652255149",
-    "MLB4711530649",
-}
-
-
-def get(url, params=None, timeout=10):
-    for tentativa in range(3):
-        try:
-            r = session.get(url, params=params, timeout=timeout)
-            if r.status_code == 429:
-                time.sleep(2)
-                continue
-            r.raise_for_status()
-            return r
-        except requests.RequestException:
-            if tentativa == 2:
-                raise
-            time.sleep(1)
-
-
-def obter_usuario():
-    return get("https://api.mercadolibre.com/users/me").json()["id"]
-
-
-def obter_vendas(user_id):
-    hoje = datetime.now(TZ)
-    inicio = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00-03:00")
-
-    vendas = {}
-    offset = 0
-
-    while True:
-        dados = get(
-            "https://api.mercadolibre.com/orders/search",
-            params={
-                "seller": user_id,
-                "order.status": "paid",
-                "order.date_created.from": inicio,
-                "offset": offset,
-                "limit": 50,
-            },
-        ).json()
-
-        total = dados["paging"]["total"]
-
-        for pedido in dados.get("results", []):
-            dc = pedido.get("date_created")
-            if not dc:
-                continue
-            data = datetime.fromisoformat(dc.replace("Z", "+00:00")).astimezone(TZ)
-            dias = (hoje - data).days
-
-            for item in pedido.get("order_items", []):
-                iid = item["item"]["id"]
-                vendas.setdefault(iid, {"7d": 0})
-                if dias <= 7:
-                    vendas[iid]["7d"] += item.get("quantity", 0)
-
-        offset += 50
-        if offset >= total:
-            break
-
-    return vendas
-
-
-def obter_itens(user_id):
-    ids = []
-    offset = 0
-
-    while True:
-        dados = get(
-            f"https://api.mercadolibre.com/users/{user_id}/items/search",
-            params={"offset": offset, "limit": 50},
-        ).json()
-
-        ids.extend(dados["results"])
-
-        offset += 50
-        if offset >= dados["paging"]["total"]:
-            break
-
-    return list(dict.fromkeys(ids))
-
-
-def detalhes(ids):
-    resultado = []
-    for i in range(0, len(ids), 20):
-        bloco = ",".join(ids[i:i+20])
-        resposta = get(
-            "https://api.mercadolibre.com/items",
-            params={"ids": bloco},
-        ).json()
-
-        for item in resposta:
-            if item.get("code") == 200:
-                resultado.append(item["body"])
-    return resultado
-
+ACCESS_TOKEN = (
+    "APP_USR-1194661319744999-080206-ba131362d77213fa93130fdbb45f61dd-1327156852"
+)
 
 class handler(BaseHTTPRequestHandler):
+  def do_GET(self):
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "User-Agent": "Mozilla/5.0",
+    }
 
-    def do_GET(self):
-        try:
-            user = obter_usuario()
-            vendas = obter_vendas(user)
-            ids = obter_itens(user)
+    try:
+      resp_user = requests.get(
+          "https://api.mercadolibre.com/users/me", headers=headers, timeout=5
+      )
+      if resp_user.status_code != 200:
+        self.send_response(401)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(
+            json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8")
+        )
+        return
 
-            relatorio = []
+      user_id = resp_user.json().get("id")
+      
+      # DELEGA O FILTRO PARA O MERCADO LIVRE (Pega apenas pedidos dos últimos 7 dias)
+      hoje = datetime.utcnow()
+      data_7_dias = (hoje - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00.000-00:00")
 
-            for item in detalhes(ids):
+      vendas = {}
+      offset = 0
+      
+      while offset < 150:
+        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_7_dias}&offset={offset}&limit=50"
+        resp_orders = requests.get(url_orders, headers=headers, timeout=5)
+        
+        if resp_orders.status_code != 200:
+          break
+          
+        dados_ord = resp_orders.json()
+        resultados = dados_ord.get("results", [])
+        
+        if not resultados:
+          break
+          
+        for pedido in resultados:
+          for item in pedido.get("order_items", []):
+            item_id = item.get("item", {}).get("id")
+            qtd = item.get("quantity", 0)
+            if item_id:
+              # Soma a quantidade vendida direto na variável
+              vendas[item_id] = vendas.get(item_id, 0) + int(qtd)
+              
+        offset += 50
 
-                if item.get("shipping", {}).get("logistic_type") != "fulfillment":
-                    continue
+      # Busca de anúncios
+      resp_items = requests.get(
+          f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=50",
+          headers=headers,
+          timeout=5,
+      )
+      item_ids = resp_items.json().get("results", [])
 
-                iid = item["id"]
+      relatorio = []
+      IDs_com_estoque_misturado = [
+          "MLB5579973070",
+          "MLB4286968229",
+          "MLB4649295965",
+          "MLB4652255149",
+          "MLB4711530649",
+      ]
 
-                estoque = 0 if iid in ESTOQUE_MISTURADO else item.get("available_quantity", 0)
+      for item_id in item_ids:
+        resp_detalhe = requests.get(
+            f"https://api.mercadolibre.com/items?ids={item_id}",
+            headers=headers,
+            timeout=3,
+        )
+        if resp_detalhe.status_code != 200:
+          continue
+        item_json = resp_detalhe.json()[0]
+        if item_json.get("code") != 200:
+          continue
 
-                v7 = vendas.get(iid, {}).get("7d", 0)
+        item_data = item_json.get("body", {})
+        if item_data.get("shipping", {}).get("logistic_type") != "fulfillment":
+          continue
 
-                media = v7 / 7 if v7 else 0
+        # Forçando o tipo correto dos dados para os botões do site não quebrarem
+        titulo = str(item_data.get("title", ""))
+        estoque_full = int(item_data.get("available_quantity", 0))
+        
+        if item_id in IDs_com_estoque_misturado:
+          estoque_full = 0
 
-                dias = round(estoque / media) if media else None
+        vendas_7d = int(vendas.get(item_id, 0))
+        venda_diaria_7d = vendas_7d / 7.0
 
-                enviar = max(0, round(media * 60 - estoque))
+        semanas_7d = float(estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999.0
+        estoque_ideal_60d = venda_diaria_7d * 60
+        enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
 
-                if dias is None:
-                    status = "Sem vendas"
-                elif dias < 15:
-                    status = "CRÍTICO"
-                elif dias < 30:
-                    status = "ATENÇÃO"
-                else:
-                    status = "OK"
+        relatorio.append({
+            "titulo": titulo,
+            "estoque": estoque_full,
+            "vendas_7d": vendas_7d,
+            "semanas_7d": round(semanas_7d, 1),
+            "enviar_60d": enviar_60d,
+        })
 
-                relatorio.append({
-                    "titulo": item["title"],
-                    "estoque": estoque,
-                    "vendas_7d": v7,
-                    "dias_estoque": dias,
-                    "status": status,
-                    "enviar_60d": enviar,
-                })
+      self.send_response(200)
+      self.send_header("Content-type", "application/json")
+      self.send_header("Access-Control-Allow-Origin", "*")
+      self.end_headers()
+      self.wfile.write(json.dumps(relatorio).encode("utf-8"))
 
-            relatorio.sort(key=lambda x: x["enviar_60d"], reverse=True)
-
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(
-                json.dumps(relatorio, ensure_ascii=False).encode("utf-8")
-            )
-
-        except Exception as e:
-            self.send_response(500)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(
-                json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8")
-            )
+    except Exception as e:
+      self.send_response(500)
+      self.send_header("Content-type", "application/json")
+      self.end_headers()
+      self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
