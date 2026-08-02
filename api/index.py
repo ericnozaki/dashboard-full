@@ -6,12 +6,11 @@ import json
 import requests
 
 ACCESS_TOKEN = (
-    "APP_USR-1194661319744999-080217-b381f374c3487f33f5e37fd7e073647d-1327156852"
+    "APP_USR-1194661319744999-080206-ba131362d77213fa93130fdbb45f61dd-1327156852"
 )
 
 class handler(BaseHTTPRequestHandler):
   def do_GET(self):
-    # Otimização 1: Reutilização de conexões TCP/IP
     session = requests.Session()
     session.headers.update({
         "Authorization": f"Bearer {ACCESS_TOKEN}",
@@ -32,7 +31,6 @@ class handler(BaseHTTPRequestHandler):
       hoje = datetime.now(timezone.utc)
       data_7_dias = (hoje - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00.000-00:00")
 
-      # Função para Thread 1: Puxar todas as vendas pagas dos últimos 7 dias
       def fetch_orders():
         vendas = {}
         offset = 0
@@ -58,7 +56,6 @@ class handler(BaseHTTPRequestHandler):
             break
         return vendas
 
-      # Função para Thread 2: Puxar todos os IDs de anúncios ativos
       def fetch_items():
         item_ids = []
         offset = 0
@@ -76,20 +73,17 @@ class handler(BaseHTTPRequestHandler):
           offset += 50
           if offset >= dados.get("paging", {}).get("total", 0):
             break
-        return list(set(item_ids)) # Remove possíveis IDs duplicados
+        return list(set(item_ids)) 
 
-      # Otimização 2: Executar buscas de I/O em paralelo
       with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_orders = executor.submit(fetch_orders)
         future_items = executor.submit(fetch_items)
-        
         vendas = future_orders.result()
         item_ids = future_items.result()
 
       relatorio = []
       IDs_com_estoque_misturado = []
 
-      # Otimização 3: Consulta de detalhes em lotes de 20 IDs por requisição
       chunks = [item_ids[i:i + 20] for i in range(0, len(item_ids), 20)]
       
       for chunk in chunks:
@@ -110,6 +104,7 @@ class handler(BaseHTTPRequestHandler):
           item_id = item_data.get("id")
           titulo = str(item_data.get("title", ""))
           estoque_full = int(item_data.get("available_quantity", 0))
+          preco = float(item_data.get("price", 0.0)) # <--- PREÇO ADICIONADO AQUI
           
           if item_id in IDs_com_estoque_misturado:
             estoque_full = 0
@@ -127,17 +122,15 @@ class handler(BaseHTTPRequestHandler):
               "vendas_7d": vendas_7d,
               "semanas_7d": round(semanas_7d, 1),
               "enviar_60d": enviar_60d,
+              "preco": preco # <--- PREÇO ENVIADO PARA O SITE
           })
 
-      # Otimização 4: Ordenação direto no backend para aliviar o front
       relatorio.sort(key=lambda x: x["enviar_60d"], reverse=True)
 
       self.send_response(200)
-      # Otimização 5: Cabeçalho com charset para suportar acentuação perfeitamente
       self.send_header("Content-type", "application/json; charset=utf-8")
       self.send_header("Access-Control-Allow-Origin", "*")
       self.end_headers()
-      # Garantia de UTF-8 limpo sem caracteres convertidos
       self.wfile.write(json.dumps(relatorio, ensure_ascii=False).encode("utf-8"))
 
     except Exception as e:
