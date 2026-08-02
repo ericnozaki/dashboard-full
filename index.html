@@ -18,6 +18,13 @@
             </button>
         </header>
 
+        <!-- Barra de Filtros -->
+        <div class="mb-4 flex flex-wrap gap-1.5 text-xs">
+            <button onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg transition">⚠️ Menor Cobertura</button>
+            <button onclick="ordenar('estoque')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg transition">📦 Maior Estoque</button>
+            <button onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg transition">🔥 Mais Vendidos</button>
+        </div>
+
         <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados...</div>
 
         <div id="lista-produtos" class="space-y-3 hidden">
@@ -26,6 +33,8 @@
     </div>
 
     <script>
+        let produtosGlobais = [];
+
         async function carregarDados() {
             const loading = document.getElementById('loading');
             const container = document.getElementById('lista-produtos');
@@ -36,45 +45,65 @@
 
             try {
                 const response = await fetch('/api/index');
-                const produtos = await response.json();
+                produtosGlobais = await response.json();
 
-                if (produtos.error) {
-                    loading.innerHTML = `<span class="text-red-400 text-xs">Erro: ${produtos.error}</span>`;
+                if (produtosGlobais.error) {
+                    loading.innerHTML = `<span class="text-red-400 text-xs">Erro: ${produtosGlobais.error}</span>`;
                     return;
                 }
 
-                produtos.forEach(p => {
-                    const card = document.createElement('div');
-                    card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow-md flex flex-col gap-2.5";
-                    
-                    const corBadge = p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-300';
-                    const textoCobertura = p.semanas_7d === 999 ? 'Estoque parado' : p.semanas_7d + ' sem.';
-
-                    card.innerHTML = `
-                        <h2 class="text-xs md:text-sm font-semibold text-slate-100 leading-snug">${p.titulo}</h2>
-                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700/60 text-center">
-                            <div class="bg-slate-900/50 p-1.5 rounded-lg">
-                                <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Estoque</span>
-                                <span class="text-sm font-bold text-blue-400">${p.estoque}</span>
-                            </div>
-                            <div class="bg-slate-900/50 p-1.5 rounded-lg">
-                                <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Vendas (7d)</span>
-                                <span class="text-sm font-bold text-slate-200">${p.vendas_7d} un</span>
-                            </div>
-                            <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center items-center">
-                                <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Cobertura</span>
-                                <span class="px-2 py-0.5 rounded text-[11px] font-bold ${corBadge}">${textoCobertura}</span>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-
+                renderizarProdutos(produtosGlobais);
                 loading.classList.add('hidden');
                 container.classList.remove('hidden');
             } catch (err) {
                 loading.innerHTML = `<span class="text-red-400 text-xs">Falha ao conectar com a API.</span>`;
             }
+        }
+
+        function renderizarProdutos(lista) {
+            const container = document.getElementById('lista-produtos');
+            container.innerHTML = '';
+
+            lista.forEach(p => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow-md flex flex-col gap-2.5";
+                
+                const corBadge = p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-300';
+                const textoCobertura = p.semanas_7d === 999 ? 'Estoque parado' : p.semanas_7d + ' sem.';
+
+                card.innerHTML = `
+                    <h2 class="text-xs md:text-sm font-semibold text-slate-100 leading-snug">${p.titulo}</h2>
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700/60 text-center">
+                        <div class="bg-slate-900/50 p-1.5 rounded-lg">
+                            <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Estoque</span>
+                            <span class="text-sm font-bold text-blue-400">${p.estoque}</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-1.5 rounded-lg">
+                            <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Vendas (7d)</span>
+                            <span class="text-sm font-bold text-slate-200">${p.vendas_7d} un</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center items-center">
+                            <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Cobertura</span>
+                            <span class="px-2 py-0.5 rounded text-[11px] font-bold ${corBadge}">${textoCobertura}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function ordenar(criterio) {
+            let listaCopia = [...produtosGlobais];
+
+            if (criterio === 'criticos') {
+                listaCopia.sort((a, b) => a.semanas_7d - b.semanas_7d);
+            } else if (criterio === 'estoque') {
+                listaCopia.sort((a, b) => b.estoque - a.estoque);
+            } else if (criterio === 'vendas') {
+                listaCopia.sort((a, b) => b.vendas_7d - a.vendas_7d);
+            }
+
+            renderizarProdutos(listaCopia);
         }
 
         carregarDados();
