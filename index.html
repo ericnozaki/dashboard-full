@@ -6,35 +6,36 @@
     <title>Painel de Reposição - Full</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
-    <div class="max-w-7xl mx-auto">
-        <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-2 md:p-6 overflow-x-hidden">
+    <div class="w-full max-w-4xl mx-auto">
+        <header class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold tracking-tight">📦 Painel de Reposição do Full</h1>
-                <p class="text-slate-400 text-sm">Análise comparativa de cobertura por diferentes janelas de vendas.</p>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight">📦 Painel Full</h1>
+                <p class="text-slate-400 text-xs md:text-sm">Análise de cobertura e reposição (7 dias).</p>
             </div>
-            <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition cursor-pointer text-sm">
-                Atualizar Dados
+            <button onclick="carregarDados()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition cursor-pointer text-xs md:text-sm">
+                Atualizar
             </button>
         </header>
 
-        <div id="loading" class="text-center py-20 text-slate-400">Carregando dados da API do Mercado Livre...</div>
+        <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados da API do Mercado Livre...</div>
 
-        <div id="tabela-container" class="overflow-x-auto hidden bg-slate-800 rounded-xl border border-slate-700 shadow-xl">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="border-b border-slate-700 bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
-                        <th class="p-4">Produto</th>
-                        <th class="p-4 text-center">Estoque Full</th>
-                        <th class="p-4 text-center">7 Dias (V / Sem.)</th>
-                        <th class="p-4 text-center">15 Dias (V / Sem.)</th>
-                        <th class="p-4 text-center">30 Dias (V / Sem.)</th>
-                    </tr>
-                </thead>
-                <tbody id="lista-produtos" class="divide-y divide-slate-700 text-sm">
-                    <!-- Preenchido via JavaScript -->
-                </tbody>
-            </table>
+        <div id="tabela-container" class="hidden w-full bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
+            <div class="w-full overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[320px]">
+                    <thead>
+                        <tr class="border-b border-slate-700 bg-slate-800/50 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider">
+                            <th class="p-2.5 md:p-4">Produto</th>
+                            <th class="p-2.5 md:p-4 text-center">Estoque</th>
+                            <th class="p-2.5 md:p-4 text-center">Vendas (7d)</th>
+                            <th class="p-2.5 md:p-4 text-center">Cobertura</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-produtos" class="divide-y divide-slate-700 text-xs md:text-sm">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -43,7 +44,7 @@
             const loading = document.getElementById('loading');
             const container = document.getElementById('tabela-container');
             const tbody = document.getElementById('lista-produtos');
-
+            
             loading.classList.remove('hidden');
             container.classList.add('hidden');
             tbody.innerHTML = '';
@@ -53,28 +54,22 @@
                 const produtos = await response.json();
 
                 if (produtos.error) {
-                    loading.innerHTML = `<span class="text-red-400">Erro: ${produtos.error}</span>`;
+                    loading.innerHTML = `<span class="text-red-400 text-xs">Erro: ${produtos.error}</span>`;
                     return;
                 }
 
                 produtos.forEach(p => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-750 transition";
-
+                    
                     tr.innerHTML = `
-                        <td class="p-4 font-medium max-w-xs truncate" title="${p.titulo}">${p.titulo}</td>
-                        <td class="p-4 text-center font-bold text-blue-400">${p.estoque}</td>
-                        <td class="p-4 text-center">
-                            <span class="block text-slate-200">${p.vendas_7d} un</span>
-                            <span class="text-xs ${p.semanas_7d <= 2 ? 'text-red-400 font-bold' : 'text-slate-400'}">${p.semanas_7d === 999 ? 'Estoque parado' : p.semanas_7d + ' sem.'}</span>
-                        </td>
-                        <td class="p-4 text-center">
-                            <span class="block text-slate-200">${p.vendas_15d} un</span>
-                            <span class="text-xs ${p.semanas_15d <= 2 ? 'text-red-400 font-bold' : 'text-slate-400'}">${p.semanas_15d === 999 ? 'Estoque parado' : p.semanas_15d + ' sem.'}</span>
-                        </td>
-                        <td class="p-4 text-center">
-                            <span class="block text-slate-200">${p.vendas_30d} un</span>
-                            <span class="text-xs ${p.semanas_30d <= 2 ? 'text-red-400 font-bold' : 'text-slate-400'}">${p.semanas_30d === 999 ? 'Estoque parado' : p.semanas_30d + ' sem.'}</span>
+                        <td class="p-2.5 md:p-4 font-medium max-w-[140px] sm:max-w-xs truncate" title="${p.titulo}">${p.titulo}</td>
+                        <td class="p-2.5 md:p-4 text-center font-bold text-blue-400">${p.estoque}</td>
+                        <td class="p-2.5 md:p-4 text-center text-slate-200">${p.vendas_7d} un</td>
+                        <td class="p-2.5 md:p-4 text-center">
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] md:text-xs font-bold ${p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-slate-300'}">
+                                ${p.semanas_7d === 999 ? 'Estoque parado' : p.semanas_7d + ' sem.'}
+                            </span>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -83,7 +78,7 @@
                 loading.classList.add('hidden');
                 container.classList.remove('hidden');
             } catch (err) {
-                loading.innerHTML = `<span class="text-red-400">Falha ao conectar com a API.</span>`;
+                loading.innerHTML = `<span class="text-red-400 text-xs">Falha ao conectar com a API.</span>`;
             }
         }
 
