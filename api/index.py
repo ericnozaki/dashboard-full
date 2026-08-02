@@ -81,7 +81,6 @@ class handler(BaseHTTPRequestHandler):
 
       relatorio = []
       
-      # Lista atualizada com o Kit de 25 Displays (MLB4711530649)
       IDs_com_estoque_misturado = [
           "MLB5579973070", # Kit 50 Marca Página
           "MLB4286968229", # Aparador 100x7cm
@@ -116,31 +115,19 @@ class handler(BaseHTTPRequestHandler):
         venda_diaria_15d = vendas_item["15d"] / 15.0
         venda_diaria_30d = vendas_item["30d"] / 30.0
 
-        semanas_7d = (
-            (estoque_full / (venda_diaria_7d * 7))
-            if venda_diaria_7d > 0
-            else 999
-        )
-        semanas_15d = (
-            (estoque_full / (venda_diaria_15d * 7))
-            if venda_diaria_15d > 0
-            else 999
-        )
-        semanas_30d = (
-            (estoque_full / (venda_diaria_30d * 7))
-            if venda_diaria_30d > 0
-            else 999
-        )
+        # Cálculo de Semanas
+        semanas_7d = (estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999
+        
+        # Cálculo de Reposição (Meta de 2 meses / 60 dias)
+        estoque_ideal_60d = venda_diaria_7d * 60
+        enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
 
         relatorio.append({
             "titulo": titulo,
             "estoque": estoque_full,
             "vendas_7d": vendas_item["7d"],
-            "vendas_15d": vendas_item["15d"],
-            "vendas_30d": vendas_item["30d"],
             "semanas_7d": round(semanas_7d, 1),
-            "semanas_15d": round(semanas_15d, 1),
-            "semanas_30d": round(semanas_30d, 1),
+            "enviar_60d": enviar_60d, # Novo Campo
         })
 
       self.send_response(200)
