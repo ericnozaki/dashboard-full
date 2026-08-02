@@ -87,13 +87,7 @@ class handler(BaseHTTPRequestHandler):
         item_ids = future_items.result()
 
       relatorio = []
-      IDs_com_estoque_misturado = [
-          "MLB5579973070",
-          "MLB4286968229",
-          "MLB4649295965",
-          "MLB4652255149",
-          "MLB4711530649",
-      ]
+      IDs_com_estoque_misturado = []
 
       # Otimização 3: Consulta de detalhes em lotes de 20 IDs por requisição
       chunks = [item_ids[i:i + 20] for i in range(0, len(item_ids), 20)]
