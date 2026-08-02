@@ -1,7 +1,7 @@
+import os
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 import json
-import os
 import requests
 
 ACCESS_TOKEN = os.getenv(
@@ -80,11 +80,14 @@ class handler(BaseHTTPRequestHandler):
       item_ids = resp_items.json().get("results", [])
 
       relatorio = []
+      
+      # Lista atualizada com o Kit de 25 Displays (MLB4711530649)
       IDs_com_estoque_misturado = [
-          "MLB5579973070",
-          "MLB4286968229",
-          "MLB4649295965",
-          "MLB4652255149",
+          "MLB5579973070", # Kit 50 Marca Página
+          "MLB4286968229", # Aparador 100x7cm
+          "MLB4649295965", # Kit 10 Display A6
+          "MLB4652255149", # Kit 5 Display A6
+          "MLB4711530649", # Kit 25 Display A6
       ]
 
       for item_id in item_ids:
