@@ -1,15 +1,12 @@
-import os
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 import json
 import requests
 
-# Cole o seu Access Token atual diretamente entre as aspas abaixo
-    ACCESS_TOKEN = (
+ACCESS_TOKEN = (
     "APP_USR-1194661319744999-080206-ba131362d77213fa93130fdbb45f61dd-1327156852"
 )
-"
-)
+
 
 class handler(BaseHTTPRequestHandler):
 
@@ -21,7 +18,7 @@ class handler(BaseHTTPRequestHandler):
 
     try:
       resp_user = requests.get(
-          "https://api.mercadolibre.com/users/me", headers=headers
+          "https://api.mercadolibre.com/users/me", headers=headers, timeout=5
       )
       if resp_user.status_code != 200:
         self.send_response(401)
@@ -34,21 +31,17 @@ class handler(BaseHTTPRequestHandler):
 
       user_id = resp_user.json().get("id")
       hoje = datetime.now()
-      data_30_dias = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00.000-00:00")
+      data_30_dias = (hoje - timedelta(days=30)).strftime(
+          "%Y-%m-%dT00:00:00.000-00:00"
+      )
 
+      # Busca rápida de pedidos dos últimos 30 dias
       vendas = {}
-      offset = 0
-      total_pedidos = 1
+      url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&limit=50"
+      resp_orders = requests.get(url_orders, headers=headers, timeout=5)
 
-      while offset < total_pedidos:
-        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&offset={offset}"
-        resp_orders = requests.get(url_orders, headers=headers)
-        if resp_orders.status_code != 200:
-          break
-        dados_ord = resp_orders.json()
-        total_pedidos = dados_ord.get("paging", {}).get("total", 0)
-
-        for pedido in dados_ord.get("results", []):
+      if resp_orders.status_code == 200:
+        for pedido in resp_orders.json().get("results", []):
           data_str = pedido.get("date_created")[:19]
           data_pedido = datetime.strptime(data_str, "%Y-%m-%dT%H:%M:%S")
           dias_atras = (hoje - data_pedido).days
@@ -56,17 +49,16 @@ class handler(BaseHTTPRequestHandler):
           for item in pedido.get("order_items", []):
             item_id = item.get("item", {}).get("id")
             qtd = item.get("quantity", 0)
-
             if item_id not in vendas:
               vendas[item_id] = {"7d": 0}
-
             if dias_atras <= 7:
               vendas[item_id]["7d"] += qtd
-        offset += 50
 
+      # Busca de anúncios ativos no Full
       resp_items = requests.get(
-          f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=50",
+          f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=30",
           headers=headers,
+          timeout=5,
       )
       item_ids = resp_items.json().get("results", [])
 
@@ -81,7 +73,9 @@ class handler(BaseHTTPRequestHandler):
 
       for item_id in item_ids:
         resp_detalhe = requests.get(
-            f"https://api.mercadolibre.com/items?ids={item_id}", headers=headers
+            f"https://api.mercadolibre.com/items?ids={item_id}",
+            headers=headers,
+            timeout=3,
         )
         if resp_detalhe.status_code != 200:
           continue
@@ -95,14 +89,17 @@ class handler(BaseHTTPRequestHandler):
 
         titulo = item_data.get("title", "")
         estoque_full = item_data.get("available_quantity", 0)
-
         if item_id in IDs_com_estoque_misturado:
           estoque_full = 0
 
         vendas_item = vendas.get(item_id, {"7d": 0})
         venda_diaria_7d = vendas_item["7d"] / 7.0
 
-        semanas_7d = (estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999
+        semanas_7d = (
+            (estoque_full / (venda_diaria_7d * 7))
+            if venda_diaria_7d > 0
+            else 999
+        )
         estoque_ideal_60d = venda_diaria_7d * 60
         enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
 
