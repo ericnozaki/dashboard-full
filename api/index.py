@@ -7,7 +7,7 @@ import requests
 # Suas credenciais fixas do aplicativo do Mercado Libre
 CLIENT_ID = "1194661319744999"
 CLIENT_SECRET = os.getenv(
-    "CLIENT_SECRET", "COLE_SUA_SECRET_KEY_AQUI"
+    "CLIENT_SECRET", "0GnE2ffoGHUkit67Zl3aQrXlIRs2Ck6U"
 )  # Opcional: pode colar direto abaixo se preferir
 # O código TG que você acabou de capturar:
 AUTHORIZATION_CODE = "TG-6a6ec3249a80eb00019de52b-1327156852"
