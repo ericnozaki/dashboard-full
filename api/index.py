@@ -4,17 +4,12 @@ from http.server import BaseHTTPRequestHandler
 import json
 import requests
 
-# Suas credenciais fixas do aplicativo do Mercado Libre
 CLIENT_ID = "1194661319744999"
-CLIENT_SECRET = os.getenv(
-    "CLIENT_SECRET", "0GnE2ffoGHUkit67Zl3aQrXlIRs2Ck6U"
-)  # Opcional: pode colar direto abaixo se preferir
-# O código TG que você acabou de capturar:
-AUTHORIZATION_CODE = "TG-6a6ec59fe33b6e00018c5537-1327156852&zx=1785644449135"
+CLIENT_SECRET = "0GnE2ffoGHUkit67Zl3aQrXlIRs2Ck6U"
+AUTHORIZATION_CODE = "TG-6a6ec59fe33b6e00018c5537-1327156852"
 REDIRECT_URI = "https://www.google.com"
 
-# Como o token expira rápido, vamos trocar o código TG atual por um par de Access + Refresh Token permanente
-def obter_tokens_iniciais():
+def obter_token_direto():
   url = "https://api.mercadolibre.com/oauth/token"
   payload = {
       "grant_type": "authorization_code",
@@ -32,33 +27,23 @@ def obter_tokens_iniciais():
     return resp.json().get("access_token")
   return None
 
-
 class handler(BaseHTTPRequestHandler):
 
   def do_GET(self):
-    # Pega o token dinamicamente
-    token_atual = obter_tokens_iniciais()
+    token_atual = obter_token_direto()
 
     if not token_atual:
       self.send_response(401)
       self.send_header("Content-type", "application/json")
       self.end_headers()
       self.wfile.write(
-          json.dumps({
-              "error": (
-                  "Falha na autenticação. Verifique as credenciais ou gere um"
-                  " novo link."
-              )
-          }).encode("utf-8")
+          json.dumps({"error": "Falha ao autenticar. Verifique o código TG ou as credenciais."}).encode("utf-8")
       )
       return
 
     headers = {
         "Authorization": f"Bearer {token_atual}",
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
-            " like Gecko) Chrome/114.0.0.0 Safari/537.36"
-        ),
+        "User-Agent": "Mozilla/5.0",
     }
 
     try:
@@ -69,25 +54,19 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(401)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(
-            json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8")
-        )
+        self.wfile.write(json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8"))
         return
 
       user_id = resp_user.json().get("id")
       hoje = datetime.now()
-      data_30_dias = (hoje - timedelta(days=30)).strftime(
-          "%Y-%m-%dT00:00:00.000-00:00"
-      )
+      data_30_dias = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00.000-00:00")
 
       vendas = {}
       offset = 0
       total_pedidos = 1
 
       while offset < total_pedidos:
-        url_orders = (
-            f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&offset={offset}"
-        )
+        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&offset={offset}"
         resp_orders = requests.get(url_orders, headers=headers)
         if resp_orders.status_code != 200:
           break
@@ -104,11 +83,8 @@ class handler(BaseHTTPRequestHandler):
             qtd = item.get("quantity", 0)
 
             if item_id not in vendas:
-              vendas[item_id] = {"7d": 0, "15d": 0, "30d": 0}
+              vendas[item_id] = {"7d": 0}
 
-            vendas[item_id]["30d"] += qtd
-            if dias_atras <= 15:
-              vendas[item_id]["15d"] += qtd
             if dias_atras <= 7:
               vendas[item_id]["7d"] += qtd
         offset += 50
@@ -120,13 +96,12 @@ class handler(BaseHTTPRequestHandler):
       item_ids = resp_items.json().get("results", [])
 
       relatorio = []
-
       IDs_com_estoque_misturado = [
-          "MLB5579973070",  # Kit 50 Marca Página
-          "MLB4286968229",  # Aparador 100x7cm
-          "MLB4649295965",  # Kit 10 Display A6
-          "MLB4652255149",  # Kit 5 Display A6
-          "MLB4711530649",  # Kit 25 Display A6
+          "MLB5579973070",
+          "MLB4286968229",
+          "MLB4649295965",
+          "MLB4652255149",
+          "MLB4711530649",
       ]
 
       for item_id in item_ids:
@@ -149,14 +124,10 @@ class handler(BaseHTTPRequestHandler):
         if item_id in IDs_com_estoque_misturado:
           estoque_full = 0
 
-        vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
+        vendas_item = vendas.get(item_id, {"7d": 0})
         venda_diaria_7d = vendas_item["7d"] / 7.0
 
-        semanas_7d = (
-            (estoque_full / (venda_diaria_7d * 7))
-            if venda_diaria_7d > 0
-            else 999
-        )
+        semanas_7d = (estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999
         estoque_ideal_60d = venda_diaria_7d * 60
         enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
 
