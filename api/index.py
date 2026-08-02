@@ -35,13 +35,20 @@ class handler(BaseHTTPRequestHandler):
           "%Y-%m-%dT00:00:00.000-00:00"
       )
 
-      # Busca rápida de pedidos dos últimos 30 dias
+      # Varredura completa de pedidos pagos dos últimos 30 dias com paginação segura
       vendas = {}
-      url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&limit=50"
-      resp_orders = requests.get(url_orders, headers=headers, timeout=5)
+      offset = 0
+      total_pedidos = 1
 
-      if resp_orders.status_code == 200:
-        for pedido in resp_orders.json().get("results", []):
+      while offset < total_pedidos and offset < 150:
+        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&offset={offset}&limit=50"
+        resp_orders = requests.get(url_orders, headers=headers, timeout=5)
+        if resp_orders.status_code != 200:
+          break
+        dados_ord = resp_orders.json()
+        total_pedidos = dados_ord.get("paging", {}).get("total", 0)
+
+        for pedido in dados_ord.get("results", []):
           data_str = pedido.get("date_created")[:19]
           data_pedido = datetime.strptime(data_str, "%Y-%m-%dT%H:%M:%S")
           dias_atras = (hoje - data_pedido).days
@@ -53,10 +60,11 @@ class handler(BaseHTTPRequestHandler):
               vendas[item_id] = {"7d": 0}
             if dias_atras <= 7:
               vendas[item_id]["7d"] += qtd
+        offset += 50
 
       # Busca de anúncios ativos no Full
       resp_items = requests.get(
-          f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=30",
+          f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=50",
           headers=headers,
           timeout=5,
       )
