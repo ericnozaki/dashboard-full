@@ -18,12 +18,12 @@
             </button>
         </header>
 
-        <!-- Barra de Filtros Atualizada -->
+        <!-- Barra de Filtros com IDs para atualizar as setas -->
         <div class="mb-4 flex flex-wrap gap-1.5 text-xs">
-            <button onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">⚠️ Menor Cobertura</button>
-            <button onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🚀 Maior Reposição</button>
-            <button onclick="ordenar('estoque')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">📦 Maior Estoque</button>
-            <button onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🔥 Mais Vendidos</button>
+            <button id="btn-criticos" onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">⚠️ Menor Cobertura</button>
+            <button id="btn-enviar" onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🚀 Maior Reposição</button>
+            <button id="btn-estoque" onclick="ordenar('estoque')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">📦 Maior Estoque</button>
+            <button id="btn-vendas" onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🔥 Mais Vendidos</button>
         </div>
 
         <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados...</div>
@@ -35,11 +35,24 @@
 
     <script>
         let produtosGlobais = [];
+        
+        // Guarda o estado atual da ordenação
+        let ordemAtual = {
+            criterio: 'criticos',
+            crescente: true // true = menor para o maior, false = maior para o menor
+        };
+
+        const titulosBotoes = {
+            'criticos': '⚠️ Menor Cobertura',
+            'enviar': '🚀 Maior Reposição',
+            'estoque': '📦 Maior Estoque',
+            'vendas': '🔥 Mais Vendidos'
+        };
 
         async function carregarDados() {
             const loading = document.getElementById('loading');
             const container = document.getElementById('lista-produtos');
-            
+
             loading.classList.remove('hidden');
             container.classList.add('hidden');
             container.innerHTML = '';
@@ -53,13 +66,58 @@
                     return;
                 }
 
-                // Renderiza inicialmente ordenado pelos críticos (padrão)
-                ordenar('criticos', false); 
+                // Aplica a ordenação padrão ao carregar
+                ordenar(ordemAtual.criterio, true); 
                 loading.classList.add('hidden');
                 container.classList.remove('hidden');
             } catch (err) {
                 loading.innerHTML = `<span class="text-red-400 text-xs">Falha ao conectar com a API.</span>`;
             }
+        }
+
+        function atualizarEstiloBotoes() {
+            // Reseta todos os botões
+            Object.keys(titulosBotoes).forEach(criterio => {
+                const btn = document.getElementById(`btn-${criterio}`);
+                btn.className = "bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition";
+                btn.innerText = titulosBotoes[criterio];
+            });
+
+            // Destaca o botão ativo e adiciona a seta indicando a direção
+            const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
+            btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg transition font-medium";
+            
+            const seta = ordemAtual.crescente ? ' ↑' : ' ↓';
+            btnAtivo.innerText = titulosBotoes[ordemAtual.criterio] + seta;
+        }
+
+        function ordenar(criterio, forcarRender = false) {
+            // Se clicou no mesmo botão, inverte a ordem. Se clicou em um novo, define o padrão.
+            if (!forcarRender) {
+                if (ordemAtual.criterio === criterio) {
+                    ordemAtual.crescente = !ordemAtual.crescente;
+                } else {
+                    ordemAtual.criterio = criterio;
+                    // Por padrão, 'criticos' começa do menor pro maior. Os outros do maior pro menor.
+                    ordemAtual.crescente = (criterio === 'criticos');
+                }
+            }
+
+            produtosGlobais.sort((a, b) => {
+                let valorA, valorB;
+                
+                if (criterio === 'criticos') { valorA = a.semanas_7d; valorB = b.semanas_7d; }
+                else if (criterio === 'estoque') { valorA = a.estoque; valorB = b.estoque; }
+                else if (criterio === 'vendas') { valorA = a.vendas_7d; valorB = b.vendas_7d; }
+                else if (criterio === 'enviar') { valorA = a.enviar_60d; valorB = b.enviar_60d; }
+
+                if (valorA < valorB) return ordemAtual.crescente ? -1 : 1;
+                if (valorA > valorB) return ordemAtual.crescente ? 1 : -1;
+                return 0;
+            });
+
+            atualizarEstiloBotoes();
+            renderizarProdutos(produtosGlobais);
         }
 
         function renderizarProdutos(lista) {
@@ -69,11 +127,9 @@
             lista.forEach(p => {
                 const card = document.createElement('div');
                 card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md flex flex-col gap-2.5";
-                
+
                 const corBadge = p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-300';
                 const textoCobertura = p.semanas_7d === 999 ? 'Parado' : p.semanas_7d + ' sem.';
-                
-                // Destaca em verde se tiver que enviar peças
                 const corEnviar = p.enviar_60d > 0 ? 'text-green-400' : 'text-slate-500';
 
                 card.innerHTML = `
@@ -101,23 +157,8 @@
             });
         }
 
-        function ordenar(criterio, renderizar = true) {
-            if (criterio === 'criticos') {
-                produtosGlobais.sort((a, b) => a.semanas_7d - b.semanas_7d);
-            } else if (criterio === 'estoque') {
-                produtosGlobais.sort((a, b) => b.estoque - a.estoque);
-            } else if (criterio === 'vendas') {
-                produtosGlobais.sort((a, b) => b.vendas_7d - a.vendas_7d);
-            } else if (criterio === 'enviar') {
-                produtosGlobais.sort((a, b) => b.enviar_60d - a.enviar_60d);
-            }
-
-            if (renderizar) {
-                renderizarProdutos(produtosGlobais);
-            }
-        }
-
-        carregarDados();
+        // Garante que os dados só sejam puxados quando a tela estiver 100% pronta
+        document.addEventListener('DOMContentLoaded', carregarDados);
     </script>
 </body>
 </html>
