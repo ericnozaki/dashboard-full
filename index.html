@@ -13,10 +13,22 @@
                 <h1 class="text-xl font-bold tracking-tight">📦 Painel Full</h1>
                 <p class="text-slate-400 text-xs">Análise de cobertura (7 dias)</p>
             </div>
-            <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs">
+            <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs shadow-md">
                 Atualizar
             </button>
         </header>
+
+        <!-- NOVO CAMPO: Meta de Estoque Dinâmica -->
+        <div class="mb-4 flex items-center justify-between bg-slate-800 border border-slate-700 p-2.5 rounded-lg shadow-sm">
+            <label for="input-dias" class="text-[11px] md:text-xs text-slate-300 font-semibold tracking-wide flex items-center gap-1.5">
+                ⏱️ META DE ESTOQUE (DIAS):
+            </label>
+            <div class="flex items-center gap-2">
+                <input type="number" id="input-dias" value="30" min="1" max="365" 
+                       class="bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm font-bold text-blue-400 w-20 text-center outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" 
+                       oninput="ordenar(ordemAtual.criterio, true)">
+            </div>
+        </div>
 
         <!-- Barra de Filtros com IDs para atualizar as setas -->
         <div class="mb-4 flex flex-wrap gap-1.5 text-xs">
@@ -76,32 +88,38 @@
         }
 
         function atualizarEstiloBotoes() {
-            // Reseta todos os botões
             Object.keys(titulosBotoes).forEach(criterio => {
                 const btn = document.getElementById(`btn-${criterio}`);
                 btn.className = "bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition";
                 btn.innerText = titulosBotoes[criterio];
             });
 
-            // Destaca o botão ativo e adiciona a seta indicando a direção
             const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
-            btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg transition font-medium";
+            btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg transition font-medium shadow-md";
             
             const seta = ordemAtual.crescente ? ' ↑' : ' ↓';
             btnAtivo.innerText = titulosBotoes[ordemAtual.criterio] + seta;
         }
 
+        // Função Matemática: Calcula o envio dinamicamente no seu celular
+        function calcularAEnviar(produto, diasMeta) {
+            const vendaDiaria = produto.vendas_7d / 7.0;
+            const estoqueIdeal = vendaDiaria * diasMeta;
+            return Math.max(0, Math.round(estoqueIdeal - produto.estoque));
+        }
+
         function ordenar(criterio, forcarRender = false) {
-            // Se clicou no mesmo botão, inverte a ordem. Se clicou em um novo, define o padrão.
             if (!forcarRender) {
                 if (ordemAtual.criterio === criterio) {
                     ordemAtual.crescente = !ordemAtual.crescente;
                 } else {
                     ordemAtual.criterio = criterio;
-                    // Por padrão, 'criticos' começa do menor pro maior. Os outros do maior pro menor.
                     ordemAtual.crescente = (criterio === 'criticos');
                 }
             }
+
+            // Pega o valor que você digitou na caixinha (padrão é 30 se estiver vazio)
+            const diasMeta = parseInt(document.getElementById('input-dias').value) || 30;
 
             produtosGlobais.sort((a, b) => {
                 let valorA, valorB;
@@ -109,7 +127,10 @@
                 if (criterio === 'criticos') { valorA = a.semanas_7d; valorB = b.semanas_7d; }
                 else if (criterio === 'estoque') { valorA = a.estoque; valorB = b.estoque; }
                 else if (criterio === 'vendas') { valorA = a.vendas_7d; valorB = b.vendas_7d; }
-                else if (criterio === 'enviar') { valorA = a.enviar_60d; valorB = b.enviar_60d; }
+                else if (criterio === 'enviar') { 
+                    valorA = calcularAEnviar(a, diasMeta); 
+                    valorB = calcularAEnviar(b, diasMeta); 
+                }
 
                 if (valorA < valorB) return ordemAtual.crescente ? -1 : 1;
                 if (valorA > valorB) return ordemAtual.crescente ? 1 : -1;
@@ -117,10 +138,10 @@
             });
 
             atualizarEstiloBotoes();
-            renderizarProdutos(produtosGlobais);
+            renderizarProdutos(produtosGlobais, diasMeta);
         }
 
-        function renderizarProdutos(lista) {
+        function renderizarProdutos(lista, diasMeta) {
             const container = document.getElementById('lista-produtos');
             container.innerHTML = '';
 
@@ -130,7 +151,10 @@
 
                 const corBadge = p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-300';
                 const textoCobertura = p.semanas_7d === 999 ? 'Parado' : p.semanas_7d + ' sem.';
-                const corEnviar = p.enviar_60d > 0 ? 'text-green-400' : 'text-slate-500';
+                
+                // Aplica o cálculo no card visual
+                const qtdEnviar = calcularAEnviar(p, diasMeta);
+                const corEnviar = qtdEnviar > 0 ? 'text-green-400' : 'text-slate-500';
 
                 card.innerHTML = `
                     <h2 class="text-[13px] md:text-sm font-semibold text-slate-100 leading-snug truncate">${p.titulo}</h2>
@@ -149,7 +173,7 @@
                         </div>
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center border border-slate-700/50">
                             <span class="block text-[9px] text-slate-400 uppercase tracking-wider">A Enviar</span>
-                            <span class="text-[13px] font-bold ${corEnviar}">+${p.enviar_60d}</span>
+                            <span class="text-[13px] font-bold ${corEnviar}">+${qtdEnviar}</span>
                         </div>
                     </div>
                 `;
