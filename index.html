@@ -6,48 +6,33 @@
     <title>Painel de Reposição - Full</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-2 md:p-6 overflow-x-hidden">
-    <div class="w-full max-w-4xl mx-auto">
-        <header class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-3 md:p-6">
+    <div class="w-full max-w-xl mx-auto">
+        <header class="mb-4 flex justify-between items-center">
             <div>
-                <h1 class="text-xl md:text-2xl font-bold tracking-tight">📦 Painel Full</h1>
-                <p class="text-slate-400 text-xs md:text-sm">Análise de cobertura e reposição (7 dias).</p>
+                <h1 class="text-xl font-bold tracking-tight">📦 Painel Full</h1>
+                <p class="text-slate-400 text-xs">Análise de cobertura (7 dias)</p>
             </div>
-            <button onclick="carregarDados()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition cursor-pointer text-xs md:text-sm">
+            <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs">
                 Atualizar
             </button>
         </header>
 
-        <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados da API do Mercado Livre...</div>
+        <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados...</div>
 
-        <div id="tabela-container" class="hidden w-full bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
-            <div class="w-full overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[320px]">
-                    <thead>
-                        <tr class="border-b border-slate-700 bg-slate-800/50 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider">
-                            <th class="p-2.5 md:p-4">Produto</th>
-                            <th class="p-2.5 md:p-4 text-center">Estoque</th>
-                            <th class="p-2.5 md:p-4 text-center">Vendas (7d)</th>
-                            <th class="p-2.5 md:p-4 text-center">Cobertura</th>
-                        </tr>
-                    </thead>
-                    <tbody id="lista-produtos" class="divide-y divide-slate-700 text-xs md:text-sm">
-                        <!-- Preenchido via JavaScript -->
-                    </tbody>
-                </table>
-            </div>
+        <div id="lista-produtos" class="space-y-3 hidden">
+            <!-- Os cards serão inseridos aqui via JavaScript -->
         </div>
     </div>
 
     <script>
         async function carregarDados() {
             const loading = document.getElementById('loading');
-            const container = document.getElementById('tabela-container');
-            const tbody = document.getElementById('lista-produtos');
+            const container = document.getElementById('lista-produtos');
             
             loading.classList.remove('hidden');
             container.classList.add('hidden');
-            tbody.innerHTML = '';
+            container.innerHTML = '';
 
             try {
                 const response = await fetch('/api/index');
@@ -59,20 +44,30 @@
                 }
 
                 produtos.forEach(p => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-750 transition";
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow-md flex flex-col gap-2.5";
                     
-                    tr.innerHTML = `
-                        <td class="p-2.5 md:p-4 font-medium max-w-[160px] sm:max-w-xs whitespace-normal line-clamp-2 leading-tight" title="${p.titulo}">${p.titulo}</td>
-                        <td class="p-2.5 md:p-4 text-center font-bold text-blue-400">${p.estoque}</td>
-                        <td class="p-2.5 md:p-4 text-center text-slate-200">${p.vendas_7d} un</td>
-                        <td class="p-2.5 md:p-4 text-center">
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] md:text-xs font-bold ${p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-slate-300'}">
-                                ${p.semanas_7d === 999 ? 'Estoque parado' : p.semanas_7d + ' sem.'}
-                            </span>
-                        </td>
+                    const corBadge = p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-300';
+                    const textoCobertura = p.semanas_7d === 999 ? 'Estoque parado' : p.semanas_7d + ' sem.';
+
+                    card.innerHTML = `
+                        <h2 class="text-xs md:text-sm font-semibold text-slate-100 leading-snug">${p.titulo}</h2>
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700/60 text-center">
+                            <div class="bg-slate-900/50 p-1.5 rounded-lg">
+                                <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Estoque</span>
+                                <span class="text-sm font-bold text-blue-400">${p.estoque}</span>
+                            </div>
+                            <div class="bg-slate-900/50 p-1.5 rounded-lg">
+                                <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Vendas (7d)</span>
+                                <span class="text-sm font-bold text-slate-200">${p.vendas_7d} un</span>
+                            </div>
+                            <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center items-center">
+                                <span class="block text-[10px] text-slate-400 uppercase tracking-wider">Cobertura</span>
+                                <span class="px-2 py-0.5 rounded text-[11px] font-bold ${corBadge}">${textoCobertura}</span>
+                            </div>
+                        </div>
                     `;
-                    tbody.appendChild(tr);
+                    container.appendChild(card);
                 });
 
                 loading.classList.add('hidden');
