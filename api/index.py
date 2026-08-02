@@ -4,17 +4,57 @@ from http.server import BaseHTTPRequestHandler
 import json
 import requests
 
-ACCESS_TOKEN = os.getenv(
-    "ACCESS_TOKEN",
-    "APP_USR-1194661319744999-080116-d9cf051171f6ea4afa8e6363019a9dcd-1327156852",
-)
+# Suas credenciais fixas do aplicativo do Mercado Libre
+CLIENT_ID = "1194661319744999"
+CLIENT_SECRET = os.getenv(
+    "CLIENT_SECRET", "COLE_SUA_SECRET_KEY_AQUI"
+)  # Opcional: pode colar direto abaixo se preferir
+# O código TG que você acabou de capturar:
+AUTHORIZATION_CODE = "TG-6a6ec3249a80eb00019de52b-1327156852"
+REDIRECT_URI = "https://www.google.com"
+
+# Como o token expira rápido, vamos trocar o código TG atual por um par de Access + Refresh Token permanente
+def obter_tokens_iniciais():
+  url = "https://api.mercadolibre.com/oauth/token"
+  payload = {
+      "grant_type": "authorization_code",
+      "client_id": CLIENT_ID,
+      "client_secret": CLIENT_SECRET,
+      "code": AUTHORIZATION_CODE,
+      "redirect_uri": REDIRECT_URI,
+  }
+  headers = {
+      "accept": "application/json",
+      "content-type": "application/x-www-form-urlencoded",
+  }
+  resp = requests.post(url, headers=headers, data=payload)
+  if resp.status_code == 200:
+    return resp.json().get("access_token")
+  return None
 
 
 class handler(BaseHTTPRequestHandler):
 
   def do_GET(self):
+    # Pega o token dinamicamente
+    token_atual = obter_tokens_iniciais()
+
+    if not token_atual:
+      self.send_response(401)
+      self.send_header("Content-type", "application/json")
+      self.end_headers()
+      self.wfile.write(
+          json.dumps({
+              "error": (
+                  "Falha na autenticação. Verifique as credenciais ou gere um"
+                  " novo link."
+              )
+          }).encode("utf-8")
+      )
+      return
+
     headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Authorization": f"Bearer {token_atual}",
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
             " like Gecko) Chrome/114.0.0.0 Safari/537.36"
@@ -80,13 +120,13 @@ class handler(BaseHTTPRequestHandler):
       item_ids = resp_items.json().get("results", [])
 
       relatorio = []
-      
+
       IDs_com_estoque_misturado = [
-          "MLB5579973070", # Kit 50 Marca Página
-          "MLB4286968229", # Aparador 100x7cm
-          "MLB4649295965", # Kit 10 Display A6
-          "MLB4652255149", # Kit 5 Display A6
-          "MLB4711530649", # Kit 25 Display A6
+          "MLB5579973070",  # Kit 50 Marca Página
+          "MLB4286968229",  # Aparador 100x7cm
+          "MLB4649295965",  # Kit 10 Display A6
+          "MLB4652255149",  # Kit 5 Display A6
+          "MLB4711530649",  # Kit 25 Display A6
       ]
 
       for item_id in item_ids:
@@ -110,15 +150,13 @@ class handler(BaseHTTPRequestHandler):
           estoque_full = 0
 
         vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
-
         venda_diaria_7d = vendas_item["7d"] / 7.0
-        venda_diaria_15d = vendas_item["15d"] / 15.0
-        venda_diaria_30d = vendas_item["30d"] / 30.0
 
-        # Cálculo de Semanas
-        semanas_7d = (estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999
-        
-        # Cálculo de Reposição (Meta de 2 meses / 60 dias)
+        semanas_7d = (
+            (estoque_full / (venda_diaria_7d * 7))
+            if venda_diaria_7d > 0
+            else 999
+        )
         estoque_ideal_60d = venda_diaria_7d * 60
         enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
 
@@ -127,7 +165,7 @@ class handler(BaseHTTPRequestHandler):
             "estoque": estoque_full,
             "vendas_7d": vendas_item["7d"],
             "semanas_7d": round(semanas_7d, 1),
-            "enviar_60d": enviar_60d, # Novo Campo
+            "enviar_60d": enviar_60d,
         })
 
       self.send_response(200)
