@@ -7,7 +7,10 @@ import requests
 # Cole o seu Access Token atual diretamente entre as aspas abaixo
 ACCESS_TOKEN = os.getenv(
     "TG-6a6f14894d48c60001adaf47-1327156852&zx=1785664652148",
-    "APP_USR-1194661319744999-080116-d9cf051171f6ea4afa8e6363019a9dcd-1327156852"
+    "ACCESS_TOKEN = (
+    "APP_USR-1194661319744999-080206-ba131362d77213fa93130fdbb45f61dd-1327156852"
+)
+"
 )
 
 class handler(BaseHTTPRequestHandler):
