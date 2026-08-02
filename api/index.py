@@ -31,17 +31,15 @@ class handler(BaseHTTPRequestHandler):
 
       user_id = resp_user.json().get("id")
       hoje = datetime.now()
-      data_30_dias = (hoje - timedelta(days=30)).strftime(
-          "%Y-%m-%dT00:00:00.000-00:00"
-      )
+      # Data formatada compatível com o filtro de pedidos do Mercado Livre
+      data_inicio = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00-00:00")
 
-      # Varredura completa de pedidos pagos dos últimos 30 dias com paginação segura
       vendas = {}
       offset = 0
       total_pedidos = 1
 
-      while offset < total_pedidos and offset < 150:
-        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&offset={offset}&limit=50"
+      while offset < total_pedidos and offset < 100:
+        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_inicio}&offset={offset}&limit=50"
         resp_orders = requests.get(url_orders, headers=headers, timeout=5)
         if resp_orders.status_code != 200:
           break
@@ -62,7 +60,6 @@ class handler(BaseHTTPRequestHandler):
               vendas[item_id]["7d"] += qtd
         offset += 50
 
-      # Busca de anúncios ativos no Full
       resp_items = requests.get(
           f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=50",
           headers=headers,
