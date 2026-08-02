@@ -4,45 +4,17 @@ from http.server import BaseHTTPRequestHandler
 import json
 import requests
 
-CLIENT_ID = "1194661319744999"
-CLIENT_SECRET = "0GnE2ffoGHUkit67Zl3aQrXlIRs2Ck6U"
-AUTHORIZATION_CODE = "TG-6a6f117f5c2637000106660b-1327156852"
-REDIRECT_URI = "https://www.google.com"
-
-def obter_token_direto():
-  url = "https://api.mercadolibre.com/oauth/token"
-  payload = {
-      "grant_type": "authorization_code",
-      "client_id": CLIENT_ID,
-      "client_secret": CLIENT_SECRET,
-      "code": AUTHORIZATION_CODE,
-      "redirect_uri": REDIRECT_URI,
-  }
-  headers = {
-      "accept": "application/json",
-      "content-type": "application/x-www-form-urlencoded",
-  }
-  resp = requests.post(url, headers=headers, data=payload)
-  if resp.status_code == 200:
-    return resp.json().get("access_token")
-  return None
+# Cole o seu Access Token atual diretamente entre as aspas abaixo
+ACCESS_TOKEN = os.getenv(
+    "ACCESS_TOKEN",
+    "APP_USR-1194661319744999-080116-d9cf051171f6ea4afa8e6363019a9dcd-1327156852"
+)
 
 class handler(BaseHTTPRequestHandler):
 
   def do_GET(self):
-    token_atual = obter_token_direto()
-
-    if not token_atual:
-      self.send_response(401)
-      self.send_header("Content-type", "application/json")
-      self.end_headers()
-      self.wfile.write(
-          json.dumps({"error": "Falha ao autenticar. Verifique o código TG ou as credenciais."}).encode("utf-8")
-      )
-      return
-
     headers = {
-        "Authorization": f"Bearer {token_atual}",
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
         "User-Agent": "Mozilla/5.0",
     }
 
@@ -54,7 +26,9 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(401)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8"))
+        self.wfile.write(
+            json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8")
+        )
         return
 
       user_id = resp_user.json().get("id")
