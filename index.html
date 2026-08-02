@@ -11,14 +11,26 @@
         <header class="mb-4 flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-bold tracking-tight">📦 Painel Full</h1>
-                <p class="text-slate-400 text-xs">Análise de cobertura (7 dias)</p>
+                <p class="text-slate-400 text-xs">Análise de cobertura e faturamento</p>
             </div>
             <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs shadow-md">
                 Atualizar
             </button>
         </header>
 
-        <!-- NOVO CAMPO: Meta de Estoque Dinâmica -->
+        <!-- Quadro de Resumo Financeiro -->
+        <div class="mb-4 bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
+            <div>
+                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Total a Enviar</p>
+                <p id="resumo-pecas" class="text-lg font-black text-white">0 un</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Potencial de Venda</p>
+                <p id="resumo-valor" class="text-lg font-black text-emerald-300">R$ 0,00</p>
+            </div>
+        </div>
+
+        <!-- Meta de Estoque Dinâmica -->
         <div class="mb-4 flex items-center justify-between bg-slate-800 border border-slate-700 p-2.5 rounded-lg shadow-sm">
             <label for="input-dias" class="text-[11px] md:text-xs text-slate-300 font-semibold tracking-wide flex items-center gap-1.5">
                 ⏱️ META DE ESTOQUE (DIAS):
@@ -30,7 +42,6 @@
             </div>
         </div>
 
-        <!-- Barra de Filtros com IDs para atualizar as setas -->
         <div class="mb-4 flex flex-wrap gap-1.5 text-xs">
             <button id="btn-criticos" onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">⚠️ Menor Cobertura</button>
             <button id="btn-enviar" onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🚀 Maior Reposição</button>
@@ -39,21 +50,12 @@
         </div>
 
         <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados...</div>
-
-        <div id="lista-produtos" class="space-y-3 hidden">
-            <!-- Os cards serão inseridos aqui via JavaScript -->
-        </div>
+        <div id="lista-produtos" class="space-y-3 hidden"></div>
     </div>
 
     <script>
         let produtosGlobais = [];
-        
-        // Guarda o estado atual da ordenação
-        let ordemAtual = {
-            criterio: 'criticos',
-            crescente: true // true = menor para o maior, false = maior para o menor
-        };
-
+        let ordemAtual = { criterio: 'criticos', crescente: true };
         const titulosBotoes = {
             'criticos': '⚠️ Menor Cobertura',
             'enviar': '🚀 Maior Reposição',
@@ -64,7 +66,6 @@
         async function carregarDados() {
             const loading = document.getElementById('loading');
             const container = document.getElementById('lista-produtos');
-
             loading.classList.remove('hidden');
             container.classList.add('hidden');
             container.innerHTML = '';
@@ -72,13 +73,10 @@
             try {
                 const response = await fetch('/api/index');
                 produtosGlobais = await response.json();
-
                 if (produtosGlobais.error) {
                     loading.innerHTML = `<span class="text-red-400 text-xs">Erro: ${produtosGlobais.error}</span>`;
                     return;
                 }
-
-                // Aplica a ordenação padrão ao carregar
                 ordenar(ordemAtual.criterio, true); 
                 loading.classList.add('hidden');
                 container.classList.remove('hidden');
@@ -93,15 +91,11 @@
                 btn.className = "bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition";
                 btn.innerText = titulosBotoes[criterio];
             });
-
             const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
             btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg transition font-medium shadow-md";
-            
-            const seta = ordemAtual.crescente ? ' ↑' : ' ↓';
-            btnAtivo.innerText = titulosBotoes[ordemAtual.criterio] + seta;
+            btnAtivo.innerText = titulosBotoes[ordemAtual.criterio] + (ordemAtual.crescente ? ' ↑' : ' ↓');
         }
 
-        // Função Matemática: Calcula o envio dinamicamente no seu celular
         function calcularAEnviar(produto, diasMeta) {
             const vendaDiaria = produto.vendas_7d / 7.0;
             const estoqueIdeal = vendaDiaria * diasMeta;
@@ -118,12 +112,10 @@
                 }
             }
 
-            // Pega o valor que você digitou na caixinha (padrão é 30 se estiver vazio)
             const diasMeta = parseInt(document.getElementById('input-dias').value) || 30;
 
             produtosGlobais.sort((a, b) => {
                 let valorA, valorB;
-                
                 if (criterio === 'criticos') { valorA = a.semanas_7d; valorB = b.semanas_7d; }
                 else if (criterio === 'estoque') { valorA = a.estoque; valorB = b.estoque; }
                 else if (criterio === 'vendas') { valorA = a.vendas_7d; valorB = b.vendas_7d; }
@@ -131,7 +123,6 @@
                     valorA = calcularAEnviar(a, diasMeta); 
                     valorB = calcularAEnviar(b, diasMeta); 
                 }
-
                 if (valorA < valorB) return ordemAtual.crescente ? -1 : 1;
                 if (valorA > valorB) return ordemAtual.crescente ? 1 : -1;
                 return 0;
@@ -144,20 +135,47 @@
         function renderizarProdutos(lista, diasMeta) {
             const container = document.getElementById('lista-produtos');
             container.innerHTML = '';
+            
+            let totalPecas = 0;
+            let totalValor = 0;
 
             lista.forEach(p => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md flex flex-col gap-2.5";
-
-                const corBadge = p.semanas_7d <= 2 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-300';
-                const textoCobertura = p.semanas_7d === 999 ? 'Parado' : p.semanas_7d + ' sem.';
-                
-                // Aplica o cálculo no card visual
                 const qtdEnviar = calcularAEnviar(p, diasMeta);
-                const corEnviar = qtdEnviar > 0 ? 'text-green-400' : 'text-slate-500';
+                totalPecas += qtdEnviar;
+                totalValor += (qtdEnviar * p.preco);
 
+                // Lógica do Semáforo
+                let corSemaforo = '';
+                let textoSemaforo = '';
+                const diasCobertura = p.semanas_7d * 7;
+
+                if (p.semanas_7d === 999 || p.vendas_7d === 0) {
+                    corSemaforo = 'bg-slate-700 text-slate-300 border-slate-600';
+                    textoSemaforo = '⚪ Parado';
+                } else if (diasCobertura <= 7) {
+                    corSemaforo = 'bg-red-500/20 text-red-400 border-red-500/30';
+                    textoSemaforo = '🔴 Urgente';
+                } else if (diasCobertura <= 14) {
+                    corSemaforo = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+                    textoSemaforo = '🟡 Atenção';
+                } else if (diasCobertura > (diasMeta + 15)) {
+                    corSemaforo = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                    textoSemaforo = '🔵 Excesso';
+                } else {
+                    corSemaforo = 'bg-green-500/20 text-green-400 border-green-500/30';
+                    textoSemaforo = '🟢 Saudável';
+                }
+
+                const corEnviar = qtdEnviar > 0 ? 'text-green-400' : 'text-slate-500';
+                
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md flex flex-col gap-2.5 relative";
                 card.innerHTML = `
-                    <h2 class="text-[13px] md:text-sm font-semibold text-slate-100 leading-snug truncate">${p.titulo}</h2>
+                    <div class="flex justify-between items-start gap-2">
+                        <h2 class="text-[13px] md:text-sm font-semibold text-slate-100 leading-snug truncate">${p.titulo}</h2>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap ${corSemaforo}">${textoSemaforo}</span>
+                    </div>
+                    
                     <div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-700/60 text-center">
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center">
                             <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Estoque</span>
@@ -168,8 +186,8 @@
                             <span class="text-[13px] font-bold text-slate-200">${p.vendas_7d} un</span>
                         </div>
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center items-center">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Cobert.</span>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${corBadge} whitespace-nowrap">${textoCobertura}</span>
+                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Preço</span>
+                            <span class="text-[11px] font-bold text-emerald-400 whitespace-nowrap">R$ ${p.preco.toFixed(2).replace('.', ',')}</span>
                         </div>
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center border border-slate-700/50">
                             <span class="block text-[9px] text-slate-400 uppercase tracking-wider">A Enviar</span>
@@ -179,9 +197,12 @@
                 `;
                 container.appendChild(card);
             });
+
+            // Atualiza os painéis de resumo
+            document.getElementById('resumo-pecas').innerText = `${totalPecas} un`;
+            document.getElementById('resumo-valor').innerText = totalValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
         }
 
-        // Garante que os dados só sejam puxados quando a tela estiver 100% pronta
         document.addEventListener('DOMContentLoaded', carregarDados);
     </script>
 </body>
