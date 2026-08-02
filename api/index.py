@@ -10,7 +10,7 @@ CLIENT_SECRET = os.getenv(
     "CLIENT_SECRET", "0GnE2ffoGHUkit67Zl3aQrXlIRs2Ck6U"
 )  # Opcional: pode colar direto abaixo se preferir
 # O código TG que você acabou de capturar:
-AUTHORIZATION_CODE = "TG-6a6ec3249a80eb00019de52b-1327156852"
+AUTHORIZATION_CODE = "TG-6a6ec59fe33b6e00018c5537-1327156852&zx=1785644449135"
 REDIRECT_URI = "https://www.google.com"
 
 # Como o token expira rápido, vamos trocar o código TG atual por um par de Access + Refresh Token permanente
