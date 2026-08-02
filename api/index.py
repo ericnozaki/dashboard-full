@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta
+import concurrent.futures
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 import json
 import requests
@@ -10,63 +11,80 @@ ACCESS_TOKEN = (
 
 class handler(BaseHTTPRequestHandler):
   def do_GET(self):
-    headers = {
+    # Otimização 1: Reutilização de conexões TCP/IP
+    session = requests.Session()
+    session.headers.update({
         "Authorization": f"Bearer {ACCESS_TOKEN}",
-        "User-Agent": "Mozilla/5.0",
-    }
+        "User-Agent": "Mozilla/5.0"
+    })
 
     try:
-      resp_user = requests.get(
-          "https://api.mercadolibre.com/users/me", headers=headers, timeout=5
-      )
+      resp_user = session.get("https://api.mercadolibre.com/users/me", timeout=5)
       if resp_user.status_code != 200:
         self.send_response(401)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(
-            json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8")
-        )
+        self.wfile.write(json.dumps({"error": "Token expirado ou inválido"}).encode("utf-8"))
         return
 
       user_id = resp_user.json().get("id")
       
-      # DELEGA O FILTRO PARA O MERCADO LIVRE (Pega apenas pedidos dos últimos 7 dias)
-      hoje = datetime.utcnow()
+      hoje = datetime.now(timezone.utc)
       data_7_dias = (hoje - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00.000-00:00")
 
-      vendas = {}
-      offset = 0
-      
-      while offset < 150:
-        url_orders = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_7_dias}&offset={offset}&limit=50"
-        resp_orders = requests.get(url_orders, headers=headers, timeout=5)
-        
-        if resp_orders.status_code != 200:
-          break
-          
-        dados_ord = resp_orders.json()
-        resultados = dados_ord.get("results", [])
-        
-        if not resultados:
-          break
-          
-        for pedido in resultados:
-          for item in pedido.get("order_items", []):
-            item_id = item.get("item", {}).get("id")
-            qtd = item.get("quantity", 0)
-            if item_id:
-              # Soma a quantidade vendida direto na variável
-              vendas[item_id] = vendas.get(item_id, 0) + int(qtd)
-              
-        offset += 50
+      # Função para Thread 1: Puxar todas as vendas pagas dos últimos 7 dias
+      def fetch_orders():
+        vendas = {}
+        offset = 0
+        while True:
+          url = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_7_dias}&offset={offset}&limit=50"
+          resp = session.get(url, timeout=5)
+          if resp.status_code != 200:
+            break
+          dados = resp.json()
+          resultados = dados.get("results", [])
+          if not resultados:
+            break
+            
+          for pedido in resultados:
+            for item in pedido.get("order_items", []):
+              item_id = item.get("item", {}).get("id")
+              qtd = item.get("quantity", 0)
+              if item_id:
+                vendas[item_id] = vendas.get(item_id, 0) + int(qtd)
+                
+          offset += 50
+          if offset >= dados.get("paging", {}).get("total", 0):
+            break
+        return vendas
 
-      # Busca de anúncios
-      resp_items = requests.get(
-          f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=50",
-          headers=headers,
-          timeout=5,
-      )
-      item_ids = resp_items.json().get("results", [])
+      # Função para Thread 2: Puxar todos os IDs de anúncios ativos
+      def fetch_items():
+        item_ids = []
+        offset = 0
+        while True:
+          url = f"https://api.mercadolibre.com/users/{user_id}/items/search?limit=50&offset={offset}"
+          resp = session.get(url, timeout=5)
+          if resp.status_code != 200:
+            break
+          dados = resp.json()
+          resultados = dados.get("results", [])
+          if not resultados:
+            break
+            
+          item_ids.extend(resultados)
+          offset += 50
+          if offset >= dados.get("paging", {}).get("total", 0):
+            break
+        return list(set(item_ids)) # Remove possíveis IDs duplicados
+
+      # Otimização 2: Executar buscas de I/O em paralelo
+      with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        future_orders = executor.submit(fetch_orders)
+        future_items = executor.submit(fetch_items)
+        
+        vendas = future_orders.result()
+        item_ids = future_items.result()
 
       relatorio = []
       IDs_com_estoque_misturado = [
@@ -77,49 +95,56 @@ class handler(BaseHTTPRequestHandler):
           "MLB4711530649",
       ]
 
-      for item_id in item_ids:
-        resp_detalhe = requests.get(
-            f"https://api.mercadolibre.com/items?ids={item_id}",
-            headers=headers,
-            timeout=3,
-        )
+      # Otimização 3: Consulta de detalhes em lotes de 20 IDs por requisição
+      chunks = [item_ids[i:i + 20] for i in range(0, len(item_ids), 20)]
+      
+      for chunk in chunks:
+        ids_str = ",".join(chunk)
+        resp_detalhe = session.get(f"https://api.mercadolibre.com/items?ids={ids_str}", timeout=10)
+        
         if resp_detalhe.status_code != 200:
           continue
-        item_json = resp_detalhe.json()[0]
-        if item_json.get("code") != 200:
-          continue
+          
+        for item_json in resp_detalhe.json():
+          if item_json.get("code") != 200:
+            continue
 
-        item_data = item_json.get("body", {})
-        if item_data.get("shipping", {}).get("logistic_type") != "fulfillment":
-          continue
+          item_data = item_json.get("body", {})
+          if item_data.get("shipping", {}).get("logistic_type") != "fulfillment":
+            continue
 
-        # Forçando o tipo correto dos dados para os botões do site não quebrarem
-        titulo = str(item_data.get("title", ""))
-        estoque_full = int(item_data.get("available_quantity", 0))
-        
-        if item_id in IDs_com_estoque_misturado:
-          estoque_full = 0
+          item_id = item_data.get("id")
+          titulo = str(item_data.get("title", ""))
+          estoque_full = int(item_data.get("available_quantity", 0))
+          
+          if item_id in IDs_com_estoque_misturado:
+            estoque_full = 0
 
-        vendas_7d = int(vendas.get(item_id, 0))
-        venda_diaria_7d = vendas_7d / 7.0
+          vendas_7d = int(vendas.get(item_id, 0))
+          venda_diaria_7d = vendas_7d / 7.0
 
-        semanas_7d = float(estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999.0
-        estoque_ideal_60d = venda_diaria_7d * 60
-        enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
+          semanas_7d = float(estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999.0
+          estoque_ideal_60d = venda_diaria_7d * 60
+          enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
 
-        relatorio.append({
-            "titulo": titulo,
-            "estoque": estoque_full,
-            "vendas_7d": vendas_7d,
-            "semanas_7d": round(semanas_7d, 1),
-            "enviar_60d": enviar_60d,
-        })
+          relatorio.append({
+              "titulo": titulo,
+              "estoque": estoque_full,
+              "vendas_7d": vendas_7d,
+              "semanas_7d": round(semanas_7d, 1),
+              "enviar_60d": enviar_60d,
+          })
+
+      # Otimização 4: Ordenação direto no backend para aliviar o front
+      relatorio.sort(key=lambda x: x["enviar_60d"], reverse=True)
 
       self.send_response(200)
-      self.send_header("Content-type", "application/json")
+      # Otimização 5: Cabeçalho com charset para suportar acentuação perfeitamente
+      self.send_header("Content-type", "application/json; charset=utf-8")
       self.send_header("Access-Control-Allow-Origin", "*")
       self.end_headers()
-      self.wfile.write(json.dumps(relatorio).encode("utf-8"))
+      # Garantia de UTF-8 limpo sem caracteres convertidos
+      self.wfile.write(json.dumps(relatorio, ensure_ascii=False).encode("utf-8"))
 
     except Exception as e:
       self.send_response(500)
