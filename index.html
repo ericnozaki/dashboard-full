@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Full & Fábrica</title>
+    <title>Painel Sete Laser - Full & Fábrica</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -16,10 +16,10 @@
                 <p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Gestão Full, Fábrica & Finanças</p>
             </div>
             <div class="flex gap-2">
-                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar dados">
-                    🔄 Sync ML
+                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar dados do ML">
+                    🔄 Sync
                 </button>
-                <button onclick="abrirConfiguracoes()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-lg transition shadow-md">
+                <button onclick="abrirConfiguracoes()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-lg transition shadow-md" title="Configurações">
                     ⚙️
                 </button>
                 <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-bold transition text-xs shadow-md">
@@ -59,16 +59,12 @@
             <div id="lista-produtos" class="space-y-3"></div>
         </div>
 
-        <!-- ABA 2: MATERIAL -->
+        <!-- ABA 2: MATERIAL (Com Resumo Consolidado de Chapas) -->
         <div id="aba-materia" class="conteudo-aba hidden space-y-4">
-            <div class="bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
-                <div>
-                    <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Total de Peças Soltas</p>
-                    <p id="resumo-pecas-soltas" class="text-lg font-black text-white">0 pçs</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Placas Necessárias</p>
-                    <p id="resumo-placas" class="text-lg font-black text-emerald-300">0.0 placas</p>
+            <div class="bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-3 rounded-lg shadow-md">
+                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Resumo Geral de Matéria-Prima Necessária</p>
+                <div id="resumo-chapas-geral" class="space-y-1 text-sm font-black text-white">
+                    <!-- Injetado dinamicamente -->
                 </div>
             </div>
             <div id="lista-materia" class="space-y-3"></div>
@@ -105,7 +101,7 @@
     <div id="modal-config" class="hidden fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 pb-24">
         <div class="w-full max-w-xl mx-auto bg-slate-800 rounded-xl border border-slate-600 shadow-2xl overflow-hidden mt-4">
             <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900">
-                <h2 class="text-lg font-bold text-white">⚙️ Configurações</h2>
+                <h2 class="text-lg font-bold text-white">⚙️ Configurações & Catálogo</h2>
                 <button onclick="fecharConfiguracoes()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
             </div>
             
@@ -134,17 +130,20 @@
                             <label class="block text-[10px] text-slate-400 font-bold mb-1">IMPOSTO SIMPLES (%)</label>
                             <input type="number" step="0.1" id="cfg-imposto" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
                         </div>
-                        <div class="col-span-2">
-                            <label class="block text-[10px] text-slate-400 font-bold mb-1">TAXA FIXA ML (Para itens < R$79)</label>
-                            <div class="flex items-center">
-                                <span class="bg-slate-700 border border-slate-600 border-r-0 rounded-l px-2 py-1.5 text-sm text-slate-300">R$</span>
-                                <input type="number" step="0.01" id="cfg-taxafixa" class="bg-slate-800 border border-slate-600 rounded-r px-2 py-1.5 text-sm text-white w-full">
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Ficha Técnica -->
+                <!-- Catálogo Mestre de Chapas -->
+                <div class="bg-slate-900/50 p-3 rounded-lg border border-emerald-700/50 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider">🗂️ Catálogo de Chapas (Matéria-Prima)</h3>
+                        <button onclick="adicionarChapaForm()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">+ Nova Chapa</button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Cadastre os materiais e preços. Alterou aqui, atualiza em todos os produtos.</p>
+                    <div id="lista-catalogo-chapas" class="space-y-2"></div>
+                </div>
+
+                <!-- Ficha Técnica por Produto -->
                 <div>
                     <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2">Ficha Técnica & Custos (Por Produto)</h3>
                     <div id="lista-regras" class="space-y-4 max-h-96 overflow-y-auto pr-1"></div>
@@ -158,19 +157,15 @@
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURAÇÃO DO SUPABASE (COLE AS CHAVES AQUI)
-        // ==========================================
         const SUPABASE_URL = 'https://nelpiazjlgwgmasaaxfg.supabase.co/rest/v1/';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lbHBpYXpqbGd3Z21hc2FheGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MDIyMjgsImV4cCI6MjEwMTM3ODIyOH0.433rc-W0GjIY3tii3-cnBJbtr1WX1ZbB50Htvv_Po90';
-        
-        // CORREÇÃO: Usar window.supabase para evitar conflito de nomes
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let produtosGlobais = [];
         let ordemAtual = { criterio: 'criticos', crescente: true };
         
-        let configApp = { diasMeta: 30, periodoBase: 30, margemSeguranca: 30, imposto: 6.0, taxaFixaML: 6.25 };
+        let configApp = { diasMeta: 30, periodoBase: 30, margemSeguranca: 30, imposto: 6.0 };
+        let catalogoChapas = { "PS 2mm": 76.00, "Acrílico 2mm": 120.00, "MDF 3mm": 45.00 };
         let regrasFabrica = {};
 
         async function carregarDados() {
@@ -179,16 +174,15 @@
             loadingEl.innerText = '⚡ Buscando configurações na nuvem...';
 
             try {
-                // 1. Pega do Supabase instantaneamente (Usando supabaseClient)
                 const { data } = await supabaseClient.from('configuracoes').select('*').eq('id', 'padrao').single();
                 if (data) {
                     configApp = { ...configApp, ...data.globais };
+                    if (data.chapas) catalogoChapas = data.chapas;
                     regrasFabrica = data.regras || {};
                 }
 
                 loadingEl.innerText = '🔄 Conectando à API do Mercado Livre...';
 
-                // 2. Busca os dados do Mercado Livre em background
                 const response = await fetch('/api/index');
                 produtosGlobais = await response.json();
                 
@@ -201,22 +195,23 @@
                 produtosGlobais.forEach(p => {
                     if (!regrasFabrica[p.titulo]) {
                         regrasFabrica[p.titulo] = { 
+                            material: Object.keys(catalogoChapas)[0] || "PS 2mm",
                             pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, 
-                            custoChapa: 80.00, comissaoML: 14.0, custoEmbalagem: 1.50
+                            comissaoML: 14.0, custoEnvio: 15.00, custoEmbalagem: 1.50
                         };
                         precisaAtualizarBanco = true;
                     }
                 });
 
                 if (precisaAtualizarBanco) {
-                    await supabaseClient.from('configuracoes').upsert({ id: 'padrao', globais: configApp, regras: regrasFabrica });
+                    await supabaseClient.from('configuracoes').upsert({ id: 'padrao', globais: configApp, chapas: catalogoChapas, regras: regrasFabrica });
                 }
 
                 loadingEl.classList.add('hidden');
                 ordenar('criticos', true);
                 mudarAba('aba-envio');
             } catch (err) {
-                loadingEl.innerHTML = `<span class="text-red-400">Falha ao conectar com os servidores. Recarregue a página.</span>`;
+                loadingEl.innerHTML = `<span class="text-red-400">Falha ao conectar. Recarregue a página.</span>`;
             }
         }
 
@@ -252,29 +247,32 @@
             const semanasCobertura = vendaDiaria > 0 ? (produto.estoque / (vendaDiaria * 7)) : 999.0;
             const enviar = Math.max(0, Math.round(estoqueIdeal - produto.estoque));
             
-            const regra = regrasFabrica[produto.titulo] || { pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, custoChapa: 80, comissaoML: 14, custoEmbalagem: 1.5 };
+            const regra = regrasFabrica[produto.titulo] || { material: "PS 2mm", pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: 14, custoEnvio: 15, custoEmbalagem: 1.5 };
+            
+            // Puxa custo da chapa direto do catálogo mestre
+            const custoChapa = catalogoChapas[regra.material] || 0;
+
             const pecasTotais = enviar * (regra.isKit ? regra.pecasPorKit : 1);
             const placasUsadas = pecasTotais > 0 ? (pecasTotais / regra.pecasPorPlaca) : 0;
             const tempoMinutos = placasUsadas * regra.tempoPorPlaca;
 
             const preco = produto.preco;
-            const custoMatUnitario = regra.custoChapa / regra.pecasPorPlaca;
+            const custoMatUnitario = regra.pecasPorPlaca > 0 ? (custoChapa / regra.pecasPorPlaca) : 0;
             const custoMaterialTotal = custoMatUnitario * (regra.isKit ? regra.pecasPorKit : 1);
             
             const comissaoValor = preco * (regra.comissaoML / 100);
-            const taxaFixa = preco < 79.0 ? parseFloat(configApp.taxaFixaML) : 0;
-            
+            const custoEnvio = parseFloat(regra.custoEnvio) || 0;
             const impostoValor = preco * (parseFloat(configApp.imposto) / 100);
-            const embalagem = parseFloat(regra.custoEmbalagem);
+            const embalagem = parseFloat(regra.custoEmbalagem) || 0;
 
-            const custoTotalItem = custoMaterialTotal + comissaoValor + taxaFixa + impostoValor + embalagem;
+            const custoTotalItem = custoMaterialTotal + comissaoValor + custoEnvio + impostoValor + embalagem;
             const lucroLiquido = preco - custoTotalItem;
             const margem = preco > 0 ? (lucroLiquido / preco) * 100 : 0;
             
             return { 
                 vendas, vendaDiaria, semanasCobertura, enviar, 
-                pecasTotais, placasUsadas, tempoMinutos,
-                custoMaterialTotal, comissaoValor, taxaFixa, impostoValor, embalagem, 
+                pecasTotais, placasUsadas, tempoMinutos, material: regra.material,
+                custoMaterialTotal, comissaoValor, custoEnvio, impostoValor, embalagem, 
                 custoTotalItem, lucroLiquido, margem
             };
         }
@@ -287,12 +285,14 @@
             const listaMateria = document.getElementById('lista-materia');
             const listaProducao = document.getElementById('lista-producao');
             const listaFinanceiro = document.getElementById('lista-financeiro');
+            const resumoChapasGeral = document.getElementById('resumo-chapas-geral');
             if(!listaMateria) return;
             
-            listaMateria.innerHTML = ''; listaProducao.innerHTML = ''; listaFinanceiro.innerHTML = '';
+            listaMateria.innerHTML = ''; listaProducao.innerHTML = ''; listaFinanceiro.innerHTML = ''; resumoChapasGeral.innerHTML = '';
 
-            let totalPecasSoltas = 0; let totalPlacas = 0; let totalMinutos = 0;
+            let totalPecasSoltas = 0; let totalMinutos = 0;
             let custoEnvioTotal = 0; let lucroEnvioTotal = 0;
+            let chapasPorMaterial = {};
 
             const produtosAEnviar = produtosGlobais.filter(p => calcularMetricas(p).enviar > 0);
 
@@ -301,22 +301,25 @@
                 const regra = regrasFabrica[p.titulo] || {};
                 
                 totalPecasSoltas += met.pecasTotais;
-                totalPlacas += met.placasUsadas;
                 totalMinutos += met.tempoMinutos;
                 
                 custoEnvioTotal += (met.custoTotalItem * met.enviar);
                 lucroEnvioTotal += (met.lucroLiquido * met.enviar);
 
+                // Agrupa chapas por tipo de material
+                chapasPorMaterial[met.material] = (chapasPorMaterial[met.material] || 0) + met.placasUsadas;
+
                 const comp = regra.isKit ? `Kit c/ ${regra.pecasPorKit}` : 'Individual';
 
+                // MATÉRIA PRIMA (Card por item)
                 const cardMat = document.createElement('div');
                 cardMat.className = "bg-slate-800 border-l-4 border-emerald-500 rounded-r-xl p-3 shadow-sm";
                 cardMat.innerHTML = `
                     <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
                     <div class="flex justify-between items-center text-xs">
                         <div>
+                            <p class="text-slate-400">Material: <span class="text-emerald-400 font-bold">${met.material}</span></p>
                             <p class="text-slate-400">Demanda: <span class="text-white font-bold">${met.enviar} envios</span> (${comp})</p>
-                            <p class="text-slate-400">Total Solto: <span class="text-white font-bold">${met.pecasTotais} pçs</span></p>
                         </div>
                         <div class="text-right bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
                             <p class="text-[9px] text-emerald-500 font-bold uppercase">Uso de Chapa</p>
@@ -326,6 +329,7 @@
                 `;
                 listaMateria.appendChild(cardMat);
 
+                // PRODUÇÃO
                 const horas = Math.floor(met.tempoMinutos / 60);
                 const mins = Math.round(met.tempoMinutos % 60);
                 const tempoStr = horas > 0 ? `${horas}h ${mins}m` : `${mins} min`;
@@ -347,6 +351,7 @@
                 `;
                 listaProducao.appendChild(cardProd);
 
+                // FINANCEIRO
                 let corMargem = met.margem >= 20 ? 'text-green-400 border-green-500' : (met.margem >= 10 ? 'text-yellow-400 border-yellow-500' : 'text-red-400 border-red-500');
                 
                 const cardFin = document.createElement('div');
@@ -375,11 +380,17 @@
                 listaFinanceiro.appendChild(cardFin);
             });
 
-            document.getElementById('resumo-pecas-soltas').innerText = `${totalPecasSoltas} pçs`;
-            document.getElementById('resumo-placas').innerText = totalPlacas.toFixed(1);
+            // Renderiza o Resumo Consolidado de Chapas no topo da Aba 2
+            for (let [mat, qtd] of Object.entries(chapasPorMaterial)) {
+                const qtdArredondada = Math.ceil(qtd); // Arredonda para cima pois compra-se chapas inteiras
+                const linha = document.createElement('div');
+                linha.className = "flex justify-between items-center bg-slate-900/60 px-3 py-1.5 rounded border border-emerald-700/30 text-xs";
+                linha.innerHTML = `<span>🔹 ${mat}:</span> <span class="text-emerald-300 font-black">${qtd.toFixed(2)} un <span class="text-[10px] text-slate-400 font-normal">(Comprar: ${qtdArredondada} chapas)</span></span>`;
+                resumoChapasGeral.appendChild(linha);
+            }
+
             const hTotal = Math.floor(totalMinutos / 60); const mTotal = Math.round(totalMinutos % 60);
             document.getElementById('resumo-tempo').innerText = `${hTotal}h ${mTotal}m`;
-            
             document.getElementById('resumo-custo').innerText = formatarReal(custoEnvioTotal);
             document.getElementById('resumo-lucro').innerText = formatarReal(lucroEnvioTotal);
         }
@@ -490,24 +501,73 @@
             document.getElementById('cfg-base').value = configApp.periodoBase;
             document.getElementById('cfg-margem').value = configApp.margemSeguranca;
             document.getElementById('cfg-imposto').value = configApp.imposto;
-            document.getElementById('cfg-taxafixa').value = configApp.taxaFixaML;
 
+            renderizarCatalogoChapas();
+            renderizarFichaTecnicaProdutos();
+
+            document.getElementById('modal-config').classList.remove('hidden');
+        }
+
+        function renderizarCatalogoChapas() {
+            const container = document.getElementById('lista-catalogo-chapas');
+            container.innerHTML = '';
+            
+            for (let [nome, preco] of Object.entries(catalogoChapas)) {
+                const div = document.createElement('div');
+                div.className = "flex gap-2 items-center bg-slate-800 p-2 rounded border border-slate-700";
+                div.innerHTML = `
+                    <input type="text" value="${nome}" class="input-chapa-nome bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white flex-1">
+                    <div class="flex items-center">
+                        <span class="bg-slate-700 text-[10px] text-slate-300 px-1.5 py-1 rounded-l border border-slate-600 border-r-0">R$</span>
+                        <input type="number" step="0.01" value="${preco}" class="input-chapa-preco bg-slate-900 border border-slate-600 rounded-r px-2 py-1 text-xs text-white w-20">
+                    </div>
+                    <button onclick="removerChapaCatalogo('${nome}')" class="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-xs">❌</button>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function adicionarChapaForm() {
+            let novoNome = "Novo Material";
+            let i = 1;
+            while(catalogoChapas[novoNome + (i > 1 ? i : '')]) i++;
+            catalogoChapas[novoNome + (i > 1 ? i : '')] = 50.00;
+            renderizarCatalogoChapas();
+            renderizarFichaTecnicaProdutos(); // Atualiza os selects dos produtos
+        }
+
+        function removerChapaCatalogo(nome) {
+            delete catalogoChapas[nome];
+            renderizarCatalogoChapas();
+            renderizarFichaTecnicaProdutos();
+        }
+
+        function renderizarFichaTecnicaProdutos() {
             const listaRegras = document.getElementById('lista-regras');
             listaRegras.innerHTML = '';
 
             produtosGlobais.forEach((p, index) => {
-                const regra = regrasFabrica[p.titulo] || { pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, custoChapa: 80, comissaoML: 14, custoEmbalagem: 1.5 };
+                const regra = regrasFabrica[p.titulo] || { material: Object.keys(catalogoChapas)[0], pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: 14, custoEnvio: 15, custoEmbalagem: 1.5 };
                 const displayKit = regra.isKit ? 'block' : 'hidden';
                 const checkedKit = regra.isKit ? 'checked' : '';
+
+                // Monta as opções do select com os materiais cadastrados no catálogo
+                let optionsMateriais = '';
+                for (let mat of Object.keys(catalogoChapas)) {
+                    let sel = (regra.material === mat) ? 'selected' : '';
+                    optionsMateriais += `<option value="${mat}" ${sel}>${mat}</option>`;
+                }
 
                 const html = `
                     <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700">
                         <p class="text-[11px] font-bold text-emerald-400 mb-2 leading-tight truncate" title="${p.titulo}">${p.titulo}</p>
                         
                         <div class="grid grid-cols-2 gap-2 text-[10px]">
-                            <div>
-                                <label class="block text-slate-400 mb-1">Custo da Chapa (R$)</label>
-                                <input type="number" step="0.01" id="cfg-custo-${index}" value="${regra.custoChapa}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            <div class="col-span-2">
+                                <label class="block text-slate-400 mb-1">Material (Chapa)</label>
+                                <select id="cfg-material-${index}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white font-bold">
+                                    ${optionsMateriais}
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-slate-400 mb-1">Peças P/ Placa</label>
@@ -533,7 +593,11 @@
                                 <input type="number" step="0.1" id="cfg-comissao-${index}" value="${regra.comissaoML}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
                             </div>
                             <div>
-                                <label class="block text-slate-400 mb-1">Embalagem (R$)</label>
+                                <label class="block text-slate-400 mb-1">Custo Envio Full (R$)</label>
+                                <input type="number" step="0.01" id="cfg-envio-${index}" value="${regra.custoEnvio}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-slate-400 mb-1">Custo de Embalagem (R$)</label>
                                 <input type="number" step="0.01" id="cfg-embalagem-${index}" value="${regra.custoEmbalagem}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
                             </div>
                         </div>
@@ -541,7 +605,6 @@
                 `;
                 listaRegras.insertAdjacentHTML('beforeend', html);
             });
-            document.getElementById('modal-config').classList.remove('hidden');
         }
 
         function toggleKit(index) {
@@ -561,16 +624,27 @@
             configApp.periodoBase = parseInt(document.getElementById('cfg-base').value) || 30;
             configApp.margemSeguranca = parseFloat(document.getElementById('cfg-margem').value) || 0;
             configApp.imposto = parseFloat(document.getElementById('cfg-imposto').value) || 0;
-            configApp.taxaFixaML = parseFloat(document.getElementById('cfg-taxafixa').value) || 0;
 
+            // Coleta o Catálogo de Chapas atualizado da tela
+            catalogoChapas = {};
+            const nomesChapas = document.querySelectorAll('.input-chapa-nome');
+            const precosChapas = document.querySelectorAll('.input-chapa-preco');
+            nomesChapas.forEach((inputNome, i) => {
+                let nome = inputNome.value.trim();
+                let preco = parseFloat(precosChapas[i].value) || 0;
+                if (nome) catalogoChapas[nome] = preco;
+            });
+
+            // Coleta a Ficha Técnica de cada produto
             produtosGlobais.forEach((p, index) => {
                 regrasFabrica[p.titulo] = {
-                    custoChapa: parseFloat(document.getElementById(`cfg-custo-${index}`).value) || 0,
+                    material: document.getElementById(`cfg-material-${index}`).value,
                     pecasPorPlaca: parseFloat(document.getElementById(`cfg-placa-${index}`).value) || 1,
                     tempoPorPlaca: parseFloat(document.getElementById(`cfg-tempo-${index}`).value) || 1,
                     isKit: document.getElementById(`cfg-iskit-${index}`).checked,
                     pecasPorKit: parseFloat(document.getElementById(`cfg-qtdkit-${index}`).value) || 1,
                     comissaoML: parseFloat(document.getElementById(`cfg-comissao-${index}`).value) || 0,
+                    custoEnvio: parseFloat(document.getElementById(`cfg-envio-${index}`).value) || 0,
                     custoEmbalagem: parseFloat(document.getElementById(`cfg-embalagem-${index}`).value) || 0
                 };
             });
@@ -578,6 +652,7 @@
             await supabaseClient.from('configuracoes').upsert({
                 id: 'padrao',
                 globais: configApp,
+                chapas: catalogoChapas,
                 regras: regrasFabrica
             });
 
