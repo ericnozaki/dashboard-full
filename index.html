@@ -16,7 +16,7 @@
                 <p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Gestão Full, Fábrica & Finanças</p>
             </div>
             <div class="flex gap-2">
-                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar preços do Mercado Livre">
+                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar dados">
                     🔄 Sync ML
                 </button>
                 <button onclick="abrirConfiguracoes()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-lg transition shadow-md">
@@ -35,7 +35,7 @@
             <button onclick="mudarAba('aba-financeiro')" id="btn-aba-financeiro" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">💰 FINAN.</button>
         </div>
 
-        <div id="loading" class="text-center py-12 text-slate-400 text-sm">Sincronizando com a nuvem...</div>
+        <div id="loading" class="text-center py-12 text-slate-400 text-sm animate-pulse">⚡ Conectando ao painel e carregando dados...</div>
 
         <!-- ABA 1: ENVIO -->
         <div id="aba-envio" class="conteudo-aba hidden space-y-4">
@@ -158,9 +158,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURAÇÃO DO SUPABASE (COLE AS CHAVES)
-        // ==========================================
         const SUPABASE_URL = 'https://nelpiazjlgwgmasaaxfg.supabase.co/rest/v1/';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lbHBpYXpqbGd3Z21hc2FheGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MDIyMjgsImV4cCI6MjEwMTM3ODIyOH0.433rc-W0GjIY3tii3-cnBJbtr1WX1ZbB50Htvv_Po90';
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -172,22 +169,26 @@
         let regrasFabrica = {};
 
         async function carregarDados() {
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('aba-envio').classList.add('hidden');
-            document.getElementById('lista-produtos').innerHTML = '';
+            const loadingEl = document.getElementById('loading');
+            loadingEl.classList.remove('hidden');
+            loadingEl.innerText = '⚡ Buscando configurações na nuvem...';
 
             try {
-                const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 'padrao').single();
+                // 1. Pega do Supabase instantaneamente
+                const { data } = await supabase.from('configuracoes').select('*').eq('id', 'padrao').single();
                 if (data) {
                     configApp = { ...configApp, ...data.globais };
                     regrasFabrica = data.regras || {};
                 }
 
+                loadingEl.innerText = '🔄 Conectando à API do Mercado Livre...';
+
+                // 2. Busca os dados do Mercado Livre em background
                 const response = await fetch('/api/index');
                 produtosGlobais = await response.json();
                 
                 if (produtosGlobais.error) {
-                    document.getElementById('loading').innerHTML = `<span class="text-red-400">Erro: ${produtosGlobais.error}</span>`;
+                    loadingEl.innerHTML = `<span class="text-red-400">Erro: ${produtosGlobais.error}</span>`;
                     return;
                 }
 
@@ -206,21 +207,19 @@
                     await supabase.from('configuracoes').upsert({ id: 'padrao', globais: configApp, regras: regrasFabrica });
                 }
 
-                document.getElementById('loading').classList.add('hidden');
+                loadingEl.classList.add('hidden');
                 ordenar('criticos', true);
                 mudarAba('aba-envio');
             } catch (err) {
-                document.getElementById('loading').innerHTML = `<span class="text-red-400">Falha ao conectar.</span>`;
+                loadingEl.innerHTML = `<span class="text-red-400">Falha ao conectar com os servidores.</span>`;
             }
         }
 
-        // Botão para ressincronizar dados do ML caso precise forçar atualização de preços
         async function sincronizarPrecosML() {
             const btn = document.getElementById('btn-sync');
-            btn.innerText = '⏳ Sincronizando...';
+            btn.innerText = '⏳ Sync...';
             await carregarDados();
             btn.innerText = '🔄 Sync ML';
-            alert('✅ Preços e dados sincronizados com sucesso!');
         }
 
         function mudarAba(abaId) {
@@ -283,6 +282,8 @@
             const listaMateria = document.getElementById('lista-materia');
             const listaProducao = document.getElementById('lista-producao');
             const listaFinanceiro = document.getElementById('lista-financeiro');
+            if(!listaMateria) return;
+            
             listaMateria.innerHTML = ''; listaProducao.innerHTML = ''; listaFinanceiro.innerHTML = '';
 
             let totalPecasSoltas = 0; let totalPlacas = 0; let totalMinutos = 0;
@@ -303,7 +304,6 @@
 
                 const comp = regra.isKit ? `Kit c/ ${regra.pecasPorKit}` : 'Individual';
 
-                // MATÉRIA PRIMA
                 const cardMat = document.createElement('div');
                 cardMat.className = "bg-slate-800 border-l-4 border-emerald-500 rounded-r-xl p-3 shadow-sm";
                 cardMat.innerHTML = `
@@ -321,7 +321,6 @@
                 `;
                 listaMateria.appendChild(cardMat);
 
-                // PRODUÇÃO
                 const horas = Math.floor(met.tempoMinutos / 60);
                 const mins = Math.round(met.tempoMinutos % 60);
                 const tempoStr = horas > 0 ? `${horas}h ${mins}m` : `${mins} min`;
@@ -343,7 +342,6 @@
                 `;
                 listaProducao.appendChild(cardProd);
 
-                // FINANCEIRO
                 let corMargem = met.margem >= 20 ? 'text-green-400 border-green-500' : (met.margem >= 10 ? 'text-yellow-400 border-yellow-500' : 'text-red-400 border-red-500');
                 
                 const cardFin = document.createElement('div');
@@ -405,7 +403,8 @@
             });
 
             ['criticos', 'enviar', 'vendas'].forEach(c => {
-                document.getElementById(`btn-${c}`).className = "bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg";
+                const btn = document.getElementById(`btn-${c}`);
+                if(btn) btn.className = "bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg";
             });
             const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
             if(btnAtivo) {
@@ -419,6 +418,7 @@
 
         function renderizarAbaEnvio() {
             const container = document.getElementById('lista-produtos');
+            if(!container) return;
             container.innerHTML = '';
             
             let totalKits = 0; let totalValor = 0;
@@ -550,7 +550,7 @@
 
         async function salvarConfiguracoes() {
             const btn = document.getElementById('btn-salvar-txt');
-            btn.innerText = 'Salvando...';
+            if(btn) btn.innerText = 'Salvando...';
 
             configApp.diasMeta = parseInt(document.getElementById('cfg-dias').value) || 30;
             configApp.periodoBase = parseInt(document.getElementById('cfg-base').value) || 30;
@@ -576,7 +576,7 @@
                 regras: regrasFabrica
             });
 
-            btn.innerText = '💾 Salvar na Nuvem';
+            if(btn) btn.innerText = '💾 Salvar na Nuvem';
             fecharConfiguracoes();
             ordenar(ordemAtual.criterio, true);
             processarAbasFabricaFinanceiro(); 
