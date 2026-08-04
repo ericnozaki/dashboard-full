@@ -8,108 +8,115 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-3 md:p-6 pb-20">
-    <div class="w-full max-w-xl mx-auto">
+    <!-- Container Responsivo: Compacto no celular, Expandido (max-w-7xl) no Computador -->
+    <div class="w-full max-w-xl md:max-w-7xl mx-auto">
         
-        <header class="mb-4 flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-md border border-slate-700">
+        <!-- CABEÇALHO -->
+        <header class="mb-4 flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-md border border-slate-700 gap-3">
             <div>
-                <h1 class="text-xl font-black tracking-tight text-white">📦 Painel Sete Laser</h1>
-                <p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Gestão Full, Fábrica & Finanças</p>
+                <h1 class="text-xl md:text-2xl font-black tracking-tight text-white">📦 Painel Sete Laser</h1>
+                <p class="text-slate-400 text-[10px] md:text-xs uppercase font-bold tracking-wider">Gestão Full, Fábrica & Finanças</p>
             </div>
-            <div class="flex gap-2">
-                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar dados do ML">
-                    🔄 Sync
+            <div class="flex gap-2 w-full md:w-auto justify-end">
+                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar dados do ML">
+                    🔄 Sync ML
                 </button>
-                <button onclick="abrirConfiguracoes()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-lg transition shadow-md" title="Configurações">
-                    ⚙️
+                <button onclick="abrirConfiguracoes()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg transition shadow-md" title="Configurações">
+                    ⚙️ Configurações
                 </button>
-                <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-bold transition text-xs shadow-md">
+                <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition text-xs shadow-md">
                     Atualizar
                 </button>
             </div>
         </header>
 
-        <div class="flex gap-1 mb-4 bg-slate-800 p-1 rounded-lg shadow-sm border border-slate-700 overflow-x-auto text-xs font-bold hide-scrollbar">
-            <button onclick="mudarAba('aba-envio')" id="btn-aba-envio" class="flex-1 min-w-[70px] py-2 rounded-md transition bg-blue-600 text-white shadow-sm">🚚 ENVIO</button>
-            <button onclick="mudarAba('aba-materia')" id="btn-aba-materia" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">🛠️ MAT.</button>
-            <button onclick="mudarAba('aba-producao')" id="btn-aba-producao" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">⏱️ PROD.</button>
-            <button onclick="mudarAba('aba-financeiro')" id="btn-aba-financeiro" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">💰 FINAN.</button>
+        <!-- NAVEGAÇÃO DAS ABAS -->
+        <div class="flex gap-1 mb-4 bg-slate-800 p-1 rounded-lg shadow-sm border border-slate-700 overflow-x-auto text-xs font-bold">
+            <button onclick="mudarAba('aba-envio')" id="btn-aba-envio" class="flex-1 min-w-[90px] py-2.5 rounded-md transition bg-blue-600 text-white shadow-sm">🚚 ENVIO</button>
+            <button onclick="mudarAba('aba-materia')" id="btn-aba-materia" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">🛠️ MATÉRIAS-PRIMAS</button>
+            <button onclick="mudarAba('aba-producao')" id="btn-aba-producao" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">⏱️ PRODUÇÃO</button>
+            <button onclick="mudarAba('aba-financeiro')" id="btn-aba-financeiro" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">💰 FINANCEIRO</button>
         </div>
 
         <div id="loading" class="text-center py-12 text-slate-400 text-sm animate-pulse">⚡ Conectando ao painel e carregando dados...</div>
 
-        <!-- ABA 1: ENVIO -->
-        <div id="aba-envio" class="conteudo-aba hidden space-y-4">
-            <div class="bg-gradient-to-r from-blue-900 to-slate-800 border border-blue-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
-                <div>
-                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-0.5">Kits a Enviar</p>
-                    <p id="resumo-pecas" class="text-lg font-black text-white">0 un</p>
+        <!-- CONTEÚDO PRINCIPAL (Grid no Desktop, Coluna Única no Celular) -->
+        <div class="space-y-4">
+
+            <!-- ABA 1: ENVIO -->
+            <div id="aba-envio" class="conteudo-aba hidden space-y-4">
+                <div class="bg-gradient-to-r from-blue-900 to-slate-800 border border-blue-700/50 p-4 rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] md:text-xs text-blue-400 font-bold uppercase tracking-wider mb-0.5">Kits a Enviar</p>
+                        <p id="resumo-pecas" class="text-xl md:text-2xl font-black text-white">0 un</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] md:text-xs text-blue-400 font-bold uppercase tracking-wider mb-0.5">Faturamento Estimado</p>
+                        <p id="resumo-valor" class="text-xl md:text-2xl font-black text-blue-300">R$ 0,00</p>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-0.5">Faturamento Estimado</p>
-                    <p id="resumo-valor" class="text-lg font-black text-blue-300">R$ 0,00</p>
+
+                <div class="flex flex-wrap gap-1.5 text-xs">
+                    <button id="btn-criticos" onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg">⚠️ Menor Cobertura</button>
+                    <button id="btn-enviar" onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg">🚀 Maior Reposição</button>
+                    <button id="btn-vendas" onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg">🔥 Mais Vendidos</button>
                 </div>
+
+                <!-- Grid no Desktop (2 colunas), 1 coluna no celular -->
+                <div id="lista-produtos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
 
-            <div class="flex flex-wrap gap-1.5 text-xs">
-                <button id="btn-criticos" onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg">⚠️ Menor Cobertura</button>
-                <button id="btn-enviar" onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg">🚀 Maior Reposição</button>
-                <button id="btn-vendas" onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg">🔥 Mais Vendidos</button>
+            <!-- ABA 2: MATERIAL -->
+            <div id="aba-materia" class="conteudo-aba hidden space-y-4">
+                <div class="bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-4 rounded-xl shadow-md">
+                    <p class="text-xs text-emerald-400 font-bold uppercase tracking-wider mb-2">Resumo Geral de Matéria-Prima Necessária</p>
+                    <div id="resumo-chapas-geral" class="space-y-1.5 text-sm font-black text-white"></div>
+                </div>
+                <div id="lista-materia" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
 
-            <div id="lista-produtos" class="space-y-3"></div>
-        </div>
-
-        <!-- ABA 2: MATERIAL (Com Resumo Consolidado de Chapas) -->
-        <div id="aba-materia" class="conteudo-aba hidden space-y-4">
-            <div class="bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-3 rounded-lg shadow-md">
-                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Resumo Geral de Matéria-Prima Necessária</p>
-                <div id="resumo-chapas-geral" class="space-y-1 text-sm font-black text-white">
-                    <!-- Injetado dinamicamente -->
+            <!-- ABA 3: PRODUÇÃO -->
+            <div id="aba-producao" class="conteudo-aba hidden space-y-4">
+                <div class="bg-gradient-to-r from-purple-900 to-slate-800 border border-purple-700/50 p-4 rounded-xl shadow-md flex justify-center items-center text-center">
+                    <div>
+                        <p class="text-xs text-purple-400 font-bold uppercase tracking-wider mb-0.5">Tempo Estimado de Máquina (Laser)</p>
+                        <p id="resumo-tempo" class="text-3xl font-black text-purple-300">00h 00m</p>
+                    </div>
                 </div>
+                <div id="lista-producao" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
-            <div id="lista-materia" class="space-y-3"></div>
-        </div>
 
-        <!-- ABA 3: PRODUÇÃO -->
-        <div id="aba-producao" class="conteudo-aba hidden space-y-4">
-            <div class="bg-gradient-to-r from-purple-900 to-slate-800 border border-purple-700/50 p-3 rounded-lg shadow-md flex justify-center items-center text-center">
-                <div>
-                    <p class="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-0.5">Tempo Estimado de Máquina (Laser)</p>
-                    <p id="resumo-tempo" class="text-2xl font-black text-purple-300">00h 00m</p>
+            <!-- ABA 4: FINANCEIRO -->
+            <div id="aba-financeiro" class="conteudo-aba hidden space-y-4">
+                <div class="bg-gradient-to-r from-amber-900 to-slate-800 border border-amber-700/50 p-4 rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5">Custo Total Envio</p>
+                        <p id="resumo-custo" class="text-xl md:text-2xl font-black text-white">R$ 0,00</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5">Lucro Líquido Esperado</p>
+                        <p id="resumo-lucro" class="text-xl md:text-2xl font-black text-amber-300">R$ 0,00</p>
+                    </div>
                 </div>
+                <div id="lista-financeiro" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
-            <div id="lista-producao" class="space-y-3"></div>
-        </div>
 
-        <!-- ABA 4: FINANCEIRO -->
-        <div id="aba-financeiro" class="conteudo-aba hidden space-y-4">
-            <div class="bg-gradient-to-r from-amber-900 to-slate-800 border border-amber-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
-                <div>
-                    <p class="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Custo Total Envio</p>
-                    <p id="resumo-custo" class="text-lg font-black text-white">R$ 0,00</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Lucro Líquido Esperado</p>
-                    <p id="resumo-lucro" class="text-lg font-black text-amber-300">R$ 0,00</p>
-                </div>
-            </div>
-            <div id="lista-financeiro" class="space-y-3"></div>
         </div>
     </div>
 
     <!-- MODAL DE CONFIGURAÇÕES -->
     <div id="modal-config" class="hidden fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 pb-24">
-        <div class="w-full max-w-xl mx-auto bg-slate-800 rounded-xl border border-slate-600 shadow-2xl overflow-hidden mt-4">
+        <div class="w-full max-w-2xl mx-auto bg-slate-800 rounded-xl border border-slate-600 shadow-2xl overflow-hidden mt-4">
             <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900">
                 <h2 class="text-lg font-bold text-white">⚙️ Configurações & Catálogo</h2>
                 <button onclick="fecharConfiguracoes()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
             </div>
             
-            <div class="p-4 space-y-6">
+            <div class="p-4 md:p-6 space-y-6">
                 <!-- Parâmetros Globais -->
-                <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 space-y-3">
+                <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 space-y-3">
                     <h3 class="text-xs font-black text-blue-400 uppercase tracking-wider">Metas & Impostos Globais</h3>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                             <label class="block text-[10px] text-slate-400 font-bold mb-1">META ESTOQUE (DIAS)</label>
                             <input type="number" id="cfg-dias" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
@@ -117,13 +124,13 @@
                         <div>
                             <label class="block text-[10px] text-slate-400 font-bold mb-1">BASE VENDAS (DIAS)</label>
                             <select id="cfg-base" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
-                                <option value="7">7 dias (Agressivo)</option>
+                                <option value="7">7 dias</option>
                                 <option value="15">15 dias</option>
-                                <option value="30">30 dias (Seguro)</option>
+                                <option value="30">30 dias</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] text-slate-400 font-bold mb-1">MARGEM DE SEGURANÇA (%)</label>
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1">MARGEM SEG. (%)</label>
                             <input type="number" id="cfg-margem" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
                         </div>
                         <div>
@@ -134,19 +141,19 @@
                 </div>
 
                 <!-- Catálogo Mestre de Chapas -->
-                <div class="bg-slate-900/50 p-3 rounded-lg border border-emerald-700/50 space-y-3">
+                <div class="bg-slate-900/50 p-4 rounded-lg border border-emerald-700/50 space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider">🗂️ Catálogo de Chapas (Matéria-Prima)</h3>
-                        <button onclick="adicionarChapaForm()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">+ Nova Chapa</button>
+                        <button onclick="adicionarChapaForm()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-xs font-bold">+ Nova Chapa</button>
                     </div>
                     <p class="text-[10px] text-slate-400 leading-relaxed">Cadastre os materiais e preços. Alterou aqui, atualiza em todos os produtos.</p>
-                    <div id="lista-catalogo-chapas" class="space-y-2"></div>
+                    <div id="lista-catalogo-chapas" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
                 </div>
 
                 <!-- Ficha Técnica por Produto -->
                 <div>
                     <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2">Ficha Técnica & Custos (Por Produto)</h3>
-                    <div id="lista-regras" class="space-y-4 max-h-96 overflow-y-auto pr-1"></div>
+                    <div id="lista-regras" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1"></div>
                 </div>
 
                 <button onclick="salvarConfiguracoes()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-md transition flex justify-center items-center gap-2">
@@ -225,10 +232,10 @@
         function mudarAba(abaId) {
             ['aba-envio', 'aba-materia', 'aba-producao', 'aba-financeiro'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
-                document.getElementById(`btn-${id}`).className = "flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200";
+                document.getElementById(`btn-${id}`).className = "flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200";
             });
             document.getElementById(abaId).classList.remove('hidden');
-            document.getElementById(`btn-${abaId}`).className = "flex-1 min-w-[70px] py-2 rounded-md transition bg-blue-600 text-white shadow-sm";
+            document.getElementById(`btn-${abaId}`).className = "flex-1 min-w-[90px] py-2.5 rounded-md transition bg-blue-600 text-white shadow-sm";
             processarAbasFabricaFinanceiro();
         }
 
@@ -249,9 +256,7 @@
             
             const regra = regrasFabrica[produto.titulo] || { material: "PS 2mm", pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: 14, custoEnvio: 15, custoEmbalagem: 1.5 };
             
-            // Puxa custo da chapa direto do catálogo mestre
             const custoChapa = catalogoChapas[regra.material] || 0;
-
             const pecasTotais = enviar * (regra.isKit ? regra.pecasPorKit : 1);
             const placasUsadas = pecasTotais > 0 ? (pecasTotais / regra.pecasPorPlaca) : 0;
             const tempoMinutos = placasUsadas * regra.tempoPorPlaca;
@@ -306,17 +311,15 @@
                 custoEnvioTotal += (met.custoTotalItem * met.enviar);
                 lucroEnvioTotal += (met.lucroLiquido * met.enviar);
 
-                // Agrupa chapas por tipo de material
                 chapasPorMaterial[met.material] = (chapasPorMaterial[met.material] || 0) + met.placasUsadas;
-
                 const comp = regra.isKit ? `Kit c/ ${regra.pecasPorKit}` : 'Individual';
 
-                // MATÉRIA PRIMA (Card por item)
+                // MATÉRIA PRIMA
                 const cardMat = document.createElement('div');
-                cardMat.className = "bg-slate-800 border-l-4 border-emerald-500 rounded-r-xl p-3 shadow-sm";
+                cardMat.className = "bg-slate-800 border-l-4 border-emerald-500 rounded-r-xl p-3 shadow-sm flex flex-col justify-between";
                 cardMat.innerHTML = `
-                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
-                    <div class="flex justify-between items-center text-xs">
+                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug mb-2">${p.titulo}</h2>
+                    <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-700">
                         <div>
                             <p class="text-slate-400">Material: <span class="text-emerald-400 font-bold">${met.material}</span></p>
                             <p class="text-slate-400">Demanda: <span class="text-white font-bold">${met.enviar} envios</span> (${comp})</p>
@@ -335,10 +338,10 @@
                 const tempoStr = horas > 0 ? `${horas}h ${mins}m` : `${mins} min`;
 
                 const cardProd = document.createElement('div');
-                cardProd.className = "bg-slate-800 border-l-4 border-purple-500 rounded-r-xl p-3 shadow-sm";
+                cardProd.className = "bg-slate-800 border-l-4 border-purple-500 rounded-r-xl p-3 shadow-sm flex flex-col justify-between";
                 cardProd.innerHTML = `
-                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
-                    <div class="flex justify-between items-center text-xs">
+                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug mb-2">${p.titulo}</h2>
+                    <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-700">
                         <div>
                             <p class="text-slate-400">Velocidade: <span class="text-white font-bold">${regra.tempoPorPlaca} min/placa</span></p>
                             <p class="text-slate-400">Processamento: <span class="text-white font-bold">${met.placasUsadas.toFixed(2)} placas</span></p>
@@ -355,36 +358,35 @@
                 let corMargem = met.margem >= 20 ? 'text-green-400 border-green-500' : (met.margem >= 10 ? 'text-yellow-400 border-yellow-500' : 'text-red-400 border-red-500');
                 
                 const cardFin = document.createElement('div');
-                cardFin.className = "bg-slate-800 border-l-4 border-amber-500 rounded-r-xl p-3 shadow-sm";
+                cardFin.className = "bg-slate-800 border-l-4 border-amber-500 rounded-r-xl p-3 shadow-sm flex flex-col justify-between";
                 cardFin.innerHTML = `
-                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
-                    <div class="grid grid-cols-4 gap-1.5 pt-1 text-center">
-                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug mb-2">${p.titulo}</h2>
+                    <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700 text-center">
+                        <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
                             <span class="block text-[8px] text-slate-400 uppercase">Preço</span>
                             <span class="text-[11px] font-bold text-slate-200">${formatarReal(p.preco)}</span>
                         </div>
-                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                        <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
                             <span class="block text-[8px] text-slate-400 uppercase">Custo UN</span>
                             <span class="text-[11px] font-bold text-red-300">${formatarReal(met.custoTotalItem)}</span>
                         </div>
-                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                        <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
                             <span class="block text-[8px] text-slate-400 uppercase">Lucro UN</span>
                             <span class="text-[11px] font-bold text-emerald-400">${formatarReal(met.lucroLiquido)}</span>
                         </div>
-                        <div class="bg-slate-900/50 p-1.5 rounded border ${corMargem.split(' ')[1]} flex flex-col justify-center">
+                        <div class="bg-slate-900/50 p-1 rounded border ${corMargem.split(' ')[1]} flex flex-col justify-center">
                             <span class="block text-[8px] text-slate-400 uppercase">Margem</span>
-                            <span class="text-[12px] font-black ${corMargem.split(' ')[0]}">${met.margem.toFixed(1)}%</span>
+                            <span class="text-[11px] font-black ${corMargem.split(' ')[0]}">${met.margem.toFixed(1)}%</span>
                         </div>
                     </div>
                 `;
                 listaFinanceiro.appendChild(cardFin);
             });
 
-            // Renderiza o Resumo Consolidado de Chapas no topo da Aba 2
             for (let [mat, qtd] of Object.entries(chapasPorMaterial)) {
-                const qtdArredondada = Math.ceil(qtd); // Arredonda para cima pois compra-se chapas inteiras
+                const qtdArredondada = Math.ceil(qtd);
                 const linha = document.createElement('div');
-                linha.className = "flex justify-between items-center bg-slate-900/60 px-3 py-1.5 rounded border border-emerald-700/30 text-xs";
+                linha.className = "flex justify-between items-center bg-slate-900/60 px-3 py-2 rounded border border-emerald-700/30 text-xs";
                 linha.innerHTML = `<span>🔹 ${mat}:</span> <span class="text-emerald-300 font-black">${qtd.toFixed(2)} un <span class="text-[10px] text-slate-400 font-normal">(Comprar: ${qtdArredondada} chapas)</span></span>`;
                 resumoChapasGeral.appendChild(linha);
             }
@@ -420,11 +422,11 @@
 
             ['criticos', 'enviar', 'vendas'].forEach(c => {
                 const btn = document.getElementById(`btn-${c}`);
-                if(btn) btn.className = "bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg";
+                if(btn) btn.className = "bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg";
             });
             const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
             if(btnAtivo) {
-                btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg font-medium shadow-md";
+                btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-3 py-2 rounded-lg font-medium shadow-md";
                 const textoOriginal = btnAtivo.innerText.replace(' ↑', '').replace(' ↓', '');
                 btnAtivo.innerText = textoOriginal + (ordemAtual.crescente ? ' ↑' : ' ↓');
             }
@@ -463,29 +465,29 @@
                 const textoCobertura = met.semanasCobertura === 999 ? 'Parado' : met.semanasCobertura.toFixed(1) + ' sem.';
                 
                 const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md flex flex-col gap-2.5 relative";
+                card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md flex flex-col justify-between gap-2.5";
                 card.innerHTML = `
                     <div class="flex justify-between items-start gap-2">
-                        <h2 class="text-[13px] md:text-sm font-semibold text-slate-100 leading-snug truncate">${p.titulo}</h2>
+                        <h2 class="text-[13px] md:text-sm font-semibold text-slate-100 leading-snug">${p.titulo}</h2>
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap ${corSemaforo}">${textoSemaforo}</span>
                     </div>
                     
-                    <div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-700/60 text-center">
-                        <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Estoque</span>
-                            <span class="text-[13px] font-bold text-blue-400">${p.estoque}</span>
+                    <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700/60 text-center">
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                            <span class="block text-[9px] text-slate-400 uppercase">Estoque</span>
+                            <span class="text-[12px] font-bold text-blue-400">${p.estoque}</span>
                         </div>
-                        <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Vend. ${configApp.periodoBase}d</span>
-                            <span class="text-[13px] font-bold text-slate-200">${met.vendas} un</span>
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                            <span class="block text-[9px] text-slate-400 uppercase">Vend. ${configApp.periodoBase}d</span>
+                            <span class="text-[12px] font-bold text-slate-200">${met.vendas} un</span>
                         </div>
-                        <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center items-center">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Cobert.</span>
-                            <span class="text-[12px] font-bold text-slate-300 whitespace-nowrap">${textoCobertura}</span>
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center items-center">
+                            <span class="block text-[9px] text-slate-400 uppercase">Cobert.</span>
+                            <span class="text-[11px] font-bold text-slate-300">${textoCobertura}</span>
                         </div>
-                        <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center border border-slate-700/50">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">A Enviar</span>
-                            <span class="text-[13px] font-black ${corEnviar}">+${met.enviar}</span>
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center border border-slate-700/50">
+                            <span class="block text-[9px] text-slate-400 uppercase">A Enviar</span>
+                            <span class="text-[12px] font-black ${corEnviar}">+${met.enviar}</span>
                         </div>
                     </div>
                 `;
@@ -521,7 +523,7 @@
                         <span class="bg-slate-700 text-[10px] text-slate-300 px-1.5 py-1 rounded-l border border-slate-600 border-r-0">R$</span>
                         <input type="number" step="0.01" value="${preco}" class="input-chapa-preco bg-slate-900 border border-slate-600 rounded-r px-2 py-1 text-xs text-white w-20">
                     </div>
-                    <button onclick="removerChapaCatalogo('${nome}')" class="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-xs">❌</button>
+                    <button onclick="removerChapaCatalogo('${nome}')" class="bg-red-900/40 hover:bg-red-900 text-red-300 px-2 py-1 rounded text-xs font-bold transition">🗑️</button>
                 `;
                 container.appendChild(div);
             }
@@ -533,13 +535,11 @@
             while(catalogoChapas[novoNome + (i > 1 ? i : '')]) i++;
             catalogoChapas[novoNome + (i > 1 ? i : '')] = 50.00;
             renderizarCatalogoChapas();
-            renderizarFichaTecnicaProdutos(); // Atualiza os selects dos produtos
         }
 
         function removerChapaCatalogo(nome) {
             delete catalogoChapas[nome];
             renderizarCatalogoChapas();
-            renderizarFichaTecnicaProdutos();
         }
 
         function renderizarFichaTecnicaProdutos() {
@@ -551,7 +551,6 @@
                 const displayKit = regra.isKit ? 'block' : 'hidden';
                 const checkedKit = regra.isKit ? 'checked' : '';
 
-                // Monta as opções do select com os materiais cadastrados no catálogo
                 let optionsMateriais = '';
                 for (let mat of Object.keys(catalogoChapas)) {
                     let sel = (regra.material === mat) ? 'selected' : '';
@@ -559,8 +558,8 @@
                 }
 
                 const html = `
-                    <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700">
-                        <p class="text-[11px] font-bold text-emerald-400 mb-2 leading-tight truncate" title="${p.titulo}">${p.titulo}</p>
+                    <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 flex flex-col justify-between">
+                        <p class="text-[11px] font-bold text-emerald-400 mb-2 leading-tight" title="${p.titulo}">${p.titulo}</p>
                         
                         <div class="grid grid-cols-2 gap-2 text-[10px]">
                             <div class="col-span-2">
@@ -585,8 +584,8 @@
                                 <label class="block text-slate-400 mb-1 text-[10px]">Quantas peças compõem o kit?</label>
                                 <input type="number" id="cfg-qtdkit-${index}" value="${regra.pecasPorKit}" class="bg-slate-800 border border-emerald-600/50 rounded px-2 py-1 w-full text-white">
                             </div>
-                            <div class="col-span-2 mt-2 pt-2 border-t border-slate-700">
-                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-2">Custos de Venda</p>
+                            <div class="col-span-2 mt-1 pt-2 border-t border-slate-700">
+                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Custos de Venda</p>
                             </div>
                             <div>
                                 <label class="block text-slate-400 mb-1">Comissão ML (%)</label>
@@ -618,14 +617,13 @@
 
         async function salvarConfiguracoes() {
             const btn = document.getElementById('btn-salvar-txt');
-            if(btn) btn.innerText = 'Salvando...';
+            if(btn) btn.innerText = 'Salvando na Nuvem...';
 
             configApp.diasMeta = parseInt(document.getElementById('cfg-dias').value) || 30;
             configApp.periodoBase = parseInt(document.getElementById('cfg-base').value) || 30;
             configApp.margemSeguranca = parseFloat(document.getElementById('cfg-margem').value) || 0;
             configApp.imposto = parseFloat(document.getElementById('cfg-imposto').value) || 0;
 
-            // Coleta o Catálogo de Chapas atualizado da tela
             catalogoChapas = {};
             const nomesChapas = document.querySelectorAll('.input-chapa-nome');
             const precosChapas = document.querySelectorAll('.input-chapa-preco');
@@ -635,7 +633,6 @@
                 if (nome) catalogoChapas[nome] = preco;
             });
 
-            // Coleta a Ficha Técnica de cada produto
             produtosGlobais.forEach((p, index) => {
                 regrasFabrica[p.titulo] = {
                     material: document.getElementById(`cfg-material-${index}`).value,
@@ -649,17 +646,21 @@
                 };
             });
 
-            await supabaseClient.from('configuracoes').upsert({
+            const { error } = await supabaseClient.from('configuracoes').upsert({
                 id: 'padrao',
                 globais: configApp,
                 chapas: catalogoChapas,
                 regras: regrasFabrica
             });
 
-            if(btn) btn.innerText = '💾 Salvar na Nuvem';
-            fecharConfiguracoes();
-            ordenar(ordemAtual.criterio, true);
-            processarAbasFabricaFinanceiro(); 
+            if (error) {
+                alert('Erro ao salvar no Supabase: ' + error.message);
+            } else {
+                if(btn) btn.innerText = '💾 Salvar na Nuvem';
+                fecharConfiguracoes();
+                ordenar(ordemAtual.criterio, true);
+                processarAbasFabricaFinanceiro(); 
+            }
         }
 
         document.addEventListener('DOMContentLoaded', carregarDados);
