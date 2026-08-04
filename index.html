@@ -158,9 +158,14 @@
     </div>
 
     <script>
+        // ==========================================
+        // CONFIGURAÇÃO DO SUPABASE (COLE AS CHAVES AQUI)
+        // ==========================================
         const SUPABASE_URL = 'https://nelpiazjlgwgmasaaxfg.supabase.co/rest/v1/';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lbHBpYXpqbGd3Z21hc2FheGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MDIyMjgsImV4cCI6MjEwMTM3ODIyOH0.433rc-W0GjIY3tii3-cnBJbtr1WX1ZbB50Htvv_Po90';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // CORREÇÃO: Usar window.supabase para evitar conflito de nomes
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let produtosGlobais = [];
         let ordemAtual = { criterio: 'criticos', crescente: true };
@@ -174,8 +179,8 @@
             loadingEl.innerText = '⚡ Buscando configurações na nuvem...';
 
             try {
-                // 1. Pega do Supabase instantaneamente
-                const { data } = await supabase.from('configuracoes').select('*').eq('id', 'padrao').single();
+                // 1. Pega do Supabase instantaneamente (Usando supabaseClient)
+                const { data } = await supabaseClient.from('configuracoes').select('*').eq('id', 'padrao').single();
                 if (data) {
                     configApp = { ...configApp, ...data.globais };
                     regrasFabrica = data.regras || {};
@@ -204,14 +209,14 @@
                 });
 
                 if (precisaAtualizarBanco) {
-                    await supabase.from('configuracoes').upsert({ id: 'padrao', globais: configApp, regras: regrasFabrica });
+                    await supabaseClient.from('configuracoes').upsert({ id: 'padrao', globais: configApp, regras: regrasFabrica });
                 }
 
                 loadingEl.classList.add('hidden');
                 ordenar('criticos', true);
                 mudarAba('aba-envio');
             } catch (err) {
-                loadingEl.innerHTML = `<span class="text-red-400">Falha ao conectar com os servidores.</span>`;
+                loadingEl.innerHTML = `<span class="text-red-400">Falha ao conectar com os servidores. Recarregue a página.</span>`;
             }
         }
 
@@ -570,7 +575,7 @@
                 };
             });
 
-            await supabase.from('configuracoes').upsert({
+            await supabaseClient.from('configuracoes').upsert({
                 id: 'padrao',
                 globais: configApp,
                 regras: regrasFabrica
