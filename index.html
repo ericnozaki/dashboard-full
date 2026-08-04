@@ -3,103 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Reposição - Full</title>
+    <title>Painel Full & Fábrica</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-3 md:p-6">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-3 md:p-6 pb-20">
     <div class="w-full max-w-xl mx-auto">
-        <header class="mb-4 flex justify-between items-center">
+        
+        <header class="mb-4 flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-md border border-slate-700">
             <div>
-                <h1 class="text-xl font-bold tracking-tight">📦 Painel Full</h1>
-                <p class="text-slate-400 text-xs">Análise de cobertura e faturamento</p>
+                <h1 class="text-xl font-black tracking-tight text-white">📦 Painel Sete Laser</h1>
+                <p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Gestão Full, Fábrica & Finanças</p>
             </div>
-            <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs shadow-md">
-                Atualizar
-            </button>
+            <div class="flex gap-2">
+                <button onclick="sincronizarPrecosML()" id="btn-sync" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-2 rounded-lg font-bold transition text-xs shadow-md flex items-center gap-1" title="Atualizar preços do Mercado Livre">
+                    🔄 Sync ML
+                </button>
+                <button onclick="abrirConfiguracoes()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-lg transition shadow-md">
+                    ⚙️
+                </button>
+                <button onclick="carregarDados()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-bold transition text-xs shadow-md">
+                    Atualizar
+                </button>
+            </div>
         </header>
 
-        <!-- Quadro de Resumo Financeiro -->
-        <div class="mb-4 bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
-            <div>
-                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Total a Enviar</p>
-                <p id="resumo-pecas" class="text-lg font-black text-white">0 un</p>
-            </div>
-            <div class="text-right">
-                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Potencial de Venda</p>
-                <p id="resumo-valor" class="text-lg font-black text-emerald-300">R$ 0,00</p>
-            </div>
+        <div class="flex gap-1 mb-4 bg-slate-800 p-1 rounded-lg shadow-sm border border-slate-700 overflow-x-auto text-xs font-bold hide-scrollbar">
+            <button onclick="mudarAba('aba-envio')" id="btn-aba-envio" class="flex-1 min-w-[70px] py-2 rounded-md transition bg-blue-600 text-white shadow-sm">🚚 ENVIO</button>
+            <button onclick="mudarAba('aba-materia')" id="btn-aba-materia" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">🛠️ MAT.</button>
+            <button onclick="mudarAba('aba-producao')" id="btn-aba-producao" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">⏱️ PROD.</button>
+            <button onclick="mudarAba('aba-financeiro')" id="btn-aba-financeiro" class="flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200">💰 FINAN.</button>
         </div>
 
-        <!-- Meta de Estoque Dinâmica -->
-        <div class="mb-4 flex items-center justify-between bg-slate-800 border border-slate-700 p-2.5 rounded-lg shadow-sm">
-            <label for="input-dias" class="text-[11px] md:text-xs text-slate-300 font-semibold tracking-wide flex items-center gap-1.5">
-                ⏱️ META DE ESTOQUE (DIAS):
-            </label>
-            <div class="flex items-center gap-2">
-                <input type="number" id="input-dias" value="30" min="1" max="365" 
-                       class="bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm font-bold text-blue-400 w-20 text-center outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" 
-                       oninput="ordenar(ordemAtual.criterio, true)">
+        <div id="loading" class="text-center py-12 text-slate-400 text-sm">Sincronizando com a nuvem...</div>
+
+        <!-- ABA 1: ENVIO -->
+        <div id="aba-envio" class="conteudo-aba hidden space-y-4">
+            <div class="bg-gradient-to-r from-blue-900 to-slate-800 border border-blue-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-0.5">Kits a Enviar</p>
+                    <p id="resumo-pecas" class="text-lg font-black text-white">0 un</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-0.5">Faturamento Estimado</p>
+                    <p id="resumo-valor" class="text-lg font-black text-blue-300">R$ 0,00</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 text-xs">
+                <button id="btn-criticos" onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg">⚠️ Menor Cobertura</button>
+                <button id="btn-enviar" onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg">🚀 Maior Reposição</button>
+                <button id="btn-vendas" onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg">🔥 Mais Vendidos</button>
+            </div>
+
+            <div id="lista-produtos" class="space-y-3"></div>
+        </div>
+
+        <!-- ABA 2: MATERIAL -->
+        <div id="aba-materia" class="conteudo-aba hidden space-y-4">
+            <div class="bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Total de Peças Soltas</p>
+                    <p id="resumo-pecas-soltas" class="text-lg font-black text-white">0 pçs</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Placas Necessárias</p>
+                    <p id="resumo-placas" class="text-lg font-black text-emerald-300">0.0 placas</p>
+                </div>
+            </div>
+            <div id="lista-materia" class="space-y-3"></div>
+        </div>
+
+        <!-- ABA 3: PRODUÇÃO -->
+        <div id="aba-producao" class="conteudo-aba hidden space-y-4">
+            <div class="bg-gradient-to-r from-purple-900 to-slate-800 border border-purple-700/50 p-3 rounded-lg shadow-md flex justify-center items-center text-center">
+                <div>
+                    <p class="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-0.5">Tempo Estimado de Máquina (Laser)</p>
+                    <p id="resumo-tempo" class="text-2xl font-black text-purple-300">00h 00m</p>
+                </div>
+            </div>
+            <div id="lista-producao" class="space-y-3"></div>
+        </div>
+
+        <!-- ABA 4: FINANCEIRO -->
+        <div id="aba-financeiro" class="conteudo-aba hidden space-y-4">
+            <div class="bg-gradient-to-r from-amber-900 to-slate-800 border border-amber-700/50 p-3 rounded-lg shadow-md flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Custo Total Envio</p>
+                    <p id="resumo-custo" class="text-lg font-black text-white">R$ 0,00</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Lucro Líquido Esperado</p>
+                    <p id="resumo-lucro" class="text-lg font-black text-amber-300">R$ 0,00</p>
+                </div>
+            </div>
+            <div id="lista-financeiro" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIGURAÇÕES -->
+    <div id="modal-config" class="hidden fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 pb-24">
+        <div class="w-full max-w-xl mx-auto bg-slate-800 rounded-xl border border-slate-600 shadow-2xl overflow-hidden mt-4">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900">
+                <h2 class="text-lg font-bold text-white">⚙️ Configurações</h2>
+                <button onclick="fecharConfiguracoes()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+            </div>
+            
+            <div class="p-4 space-y-6">
+                <!-- Parâmetros Globais -->
+                <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 space-y-3">
+                    <h3 class="text-xs font-black text-blue-400 uppercase tracking-wider">Metas & Impostos Globais</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1">META ESTOQUE (DIAS)</label>
+                            <input type="number" id="cfg-dias" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1">BASE VENDAS (DIAS)</label>
+                            <select id="cfg-base" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
+                                <option value="7">7 dias (Agressivo)</option>
+                                <option value="15">15 dias</option>
+                                <option value="30">30 dias (Seguro)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1">MARGEM DE SEGURANÇA (%)</label>
+                            <input type="number" id="cfg-margem" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1">IMPOSTO SIMPLES (%)</label>
+                            <input type="number" step="0.1" id="cfg-imposto" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white w-full">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1">TAXA FIXA ML (Para itens < R$79)</label>
+                            <div class="flex items-center">
+                                <span class="bg-slate-700 border border-slate-600 border-r-0 rounded-l px-2 py-1.5 text-sm text-slate-300">R$</span>
+                                <input type="number" step="0.01" id="cfg-taxafixa" class="bg-slate-800 border border-slate-600 rounded-r px-2 py-1.5 text-sm text-white w-full">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ficha Técnica -->
+                <div>
+                    <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2">Ficha Técnica & Custos (Por Produto)</h3>
+                    <div id="lista-regras" class="space-y-4 max-h-96 overflow-y-auto pr-1"></div>
+                </div>
+
+                <button onclick="salvarConfiguracoes()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-md transition flex justify-center items-center gap-2">
+                    <span id="btn-salvar-txt">💾 Salvar na Nuvem</span>
+                </button>
             </div>
         </div>
-
-        <div class="mb-4 flex flex-wrap gap-1.5 text-xs">
-            <button id="btn-criticos" onclick="ordenar('criticos')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">⚠️ Menor Cobertura</button>
-            <button id="btn-enviar" onclick="ordenar('enviar')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🚀 Maior Reposição</button>
-            <button id="btn-estoque" onclick="ordenar('estoque')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">📦 Maior Estoque</button>
-            <button id="btn-vendas" onclick="ordenar('vendas')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition">🔥 Mais Vendidos</button>
-        </div>
-
-        <div id="loading" class="text-center py-12 text-slate-400 text-sm">Carregando dados...</div>
-        <div id="lista-produtos" class="space-y-3 hidden"></div>
     </div>
 
     <script>
+        // ==========================================
+        // CONFIGURAÇÃO DO SUPABASE (COLE AS CHAVES)
+        // ==========================================
+        const SUPABASE_URL = 'https://nelpiazjlgwgmasaaxfg.supabase.co/rest/v1/';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lbHBpYXpqbGd3Z21hc2FheGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MDIyMjgsImV4cCI6MjEwMTM3ODIyOH0.433rc-W0GjIY3tii3-cnBJbtr1WX1ZbB50Htvv_Po90';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let produtosGlobais = [];
         let ordemAtual = { criterio: 'criticos', crescente: true };
-        const titulosBotoes = {
-            'criticos': '⚠️ Menor Cobertura',
-            'enviar': '🚀 Maior Reposição',
-            'estoque': '📦 Maior Estoque',
-            'vendas': '🔥 Mais Vendidos'
-        };
+        
+        let configApp = { diasMeta: 30, periodoBase: 30, margemSeguranca: 30, imposto: 6.0, taxaFixaML: 6.25 };
+        let regrasFabrica = {};
 
         async function carregarDados() {
-            const loading = document.getElementById('loading');
-            const container = document.getElementById('lista-produtos');
-            loading.classList.remove('hidden');
-            container.classList.add('hidden');
-            container.innerHTML = '';
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('aba-envio').classList.add('hidden');
+            document.getElementById('lista-produtos').innerHTML = '';
 
             try {
+                const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 'padrao').single();
+                if (data) {
+                    configApp = { ...configApp, ...data.globais };
+                    regrasFabrica = data.regras || {};
+                }
+
                 const response = await fetch('/api/index');
                 produtosGlobais = await response.json();
+                
                 if (produtosGlobais.error) {
-                    loading.innerHTML = `<span class="text-red-400 text-xs">Erro: ${produtosGlobais.error}</span>`;
+                    document.getElementById('loading').innerHTML = `<span class="text-red-400">Erro: ${produtosGlobais.error}</span>`;
                     return;
                 }
-                ordenar(ordemAtual.criterio, true); 
-                loading.classList.add('hidden');
-                container.classList.remove('hidden');
+
+                let precisaAtualizarBanco = false;
+                produtosGlobais.forEach(p => {
+                    if (!regrasFabrica[p.titulo]) {
+                        regrasFabrica[p.titulo] = { 
+                            pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, 
+                            custoChapa: 80.00, comissaoML: 14.0, custoEmbalagem: 1.50
+                        };
+                        precisaAtualizarBanco = true;
+                    }
+                });
+
+                if (precisaAtualizarBanco) {
+                    await supabase.from('configuracoes').upsert({ id: 'padrao', globais: configApp, regras: regrasFabrica });
+                }
+
+                document.getElementById('loading').classList.add('hidden');
+                ordenar('criticos', true);
+                mudarAba('aba-envio');
             } catch (err) {
-                loading.innerHTML = `<span class="text-red-400 text-xs">Falha ao conectar com a API.</span>`;
+                document.getElementById('loading').innerHTML = `<span class="text-red-400">Falha ao conectar.</span>`;
             }
         }
 
-        function atualizarEstiloBotoes() {
-            Object.keys(titulosBotoes).forEach(criterio => {
-                const btn = document.getElementById(`btn-${criterio}`);
-                btn.className = "bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 px-2 py-1.5 rounded-lg transition";
-                btn.innerText = titulosBotoes[criterio];
-            });
-            const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
-            btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg transition font-medium shadow-md";
-            btnAtivo.innerText = titulosBotoes[ordemAtual.criterio] + (ordemAtual.crescente ? ' ↑' : ' ↓');
+        // Botão para ressincronizar dados do ML caso precise forçar atualização de preços
+        async function sincronizarPrecosML() {
+            const btn = document.getElementById('btn-sync');
+            btn.innerText = '⏳ Sincronizando...';
+            await carregarDados();
+            btn.innerText = '🔄 Sync ML';
+            alert('✅ Preços e dados sincronizados com sucesso!');
         }
 
-        function calcularAEnviar(produto, diasMeta) {
-            const vendaDiaria = produto.vendas_7d / 7.0;
-            const estoqueIdeal = vendaDiaria * diasMeta;
-            return Math.max(0, Math.round(estoqueIdeal - produto.estoque));
+        function mudarAba(abaId) {
+            ['aba-envio', 'aba-materia', 'aba-producao', 'aba-financeiro'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(`btn-${id}`).className = "flex-1 min-w-[70px] py-2 rounded-md transition text-slate-400 hover:text-slate-200";
+            });
+            document.getElementById(abaId).classList.remove('hidden');
+            document.getElementById(`btn-${abaId}`).className = "flex-1 min-w-[70px] py-2 rounded-md transition bg-blue-600 text-white shadow-sm";
+            processarAbasFabricaFinanceiro();
+        }
+
+        function getVendasPeriodo(produto, periodo) {
+            if (periodo === 15) return produto.vendas_15d;
+            if (periodo === 30) return produto.vendas_30d;
+            return produto.vendas_7d;
+        }
+
+        function calcularMetricas(produto) {
+            const vendas = getVendasPeriodo(produto, configApp.periodoBase);
+            const vendaDiaria = vendas / configApp.periodoBase;
+            const fatorSeguranca = 1 + (configApp.margemSeguranca / 100);
+            const estoqueIdeal = vendaDiaria * configApp.diasMeta * fatorSeguranca;
+            
+            const semanasCobertura = vendaDiaria > 0 ? (produto.estoque / (vendaDiaria * 7)) : 999.0;
+            const enviar = Math.max(0, Math.round(estoqueIdeal - produto.estoque));
+            
+            const regra = regrasFabrica[produto.titulo] || { pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, custoChapa: 80, comissaoML: 14, custoEmbalagem: 1.5 };
+            const pecasTotais = enviar * (regra.isKit ? regra.pecasPorKit : 1);
+            const placasUsadas = pecasTotais > 0 ? (pecasTotais / regra.pecasPorPlaca) : 0;
+            const tempoMinutos = placasUsadas * regra.tempoPorPlaca;
+
+            const preco = produto.preco;
+            const custoMatUnitario = regra.custoChapa / regra.pecasPorPlaca;
+            const custoMaterialTotal = custoMatUnitario * (regra.isKit ? regra.pecasPorKit : 1);
+            
+            const comissaoValor = preco * (regra.comissaoML / 100);
+            const taxaFixa = preco < 79.0 ? parseFloat(configApp.taxaFixaML) : 0;
+            
+            const impostoValor = preco * (parseFloat(configApp.imposto) / 100);
+            const embalagem = parseFloat(regra.custoEmbalagem);
+
+            const custoTotalItem = custoMaterialTotal + comissaoValor + taxaFixa + impostoValor + embalagem;
+            const lucroLiquido = preco - custoTotalItem;
+            const margem = preco > 0 ? (lucroLiquido / preco) * 100 : 0;
+            
+            return { 
+                vendas, vendaDiaria, semanasCobertura, enviar, 
+                pecasTotais, placasUsadas, tempoMinutos,
+                custoMaterialTotal, comissaoValor, taxaFixa, impostoValor, embalagem, 
+                custoTotalItem, lucroLiquido, margem
+            };
+        }
+
+        function formatarReal(valor) {
+            return valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        }
+
+        function processarAbasFabricaFinanceiro() {
+            const listaMateria = document.getElementById('lista-materia');
+            const listaProducao = document.getElementById('lista-producao');
+            const listaFinanceiro = document.getElementById('lista-financeiro');
+            listaMateria.innerHTML = ''; listaProducao.innerHTML = ''; listaFinanceiro.innerHTML = '';
+
+            let totalPecasSoltas = 0; let totalPlacas = 0; let totalMinutos = 0;
+            let custoEnvioTotal = 0; let lucroEnvioTotal = 0;
+
+            const produtosAEnviar = produtosGlobais.filter(p => calcularMetricas(p).enviar > 0);
+
+            produtosAEnviar.sort((a, b) => calcularMetricas(b).placasUsadas - calcularMetricas(a).placasUsadas).forEach(p => {
+                const met = calcularMetricas(p);
+                const regra = regrasFabrica[p.titulo] || {};
+                
+                totalPecasSoltas += met.pecasTotais;
+                totalPlacas += met.placasUsadas;
+                totalMinutos += met.tempoMinutos;
+                
+                custoEnvioTotal += (met.custoTotalItem * met.enviar);
+                lucroEnvioTotal += (met.lucroLiquido * met.enviar);
+
+                const comp = regra.isKit ? `Kit c/ ${regra.pecasPorKit}` : 'Individual';
+
+                // MATÉRIA PRIMA
+                const cardMat = document.createElement('div');
+                cardMat.className = "bg-slate-800 border-l-4 border-emerald-500 rounded-r-xl p-3 shadow-sm";
+                cardMat.innerHTML = `
+                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
+                    <div class="flex justify-between items-center text-xs">
+                        <div>
+                            <p class="text-slate-400">Demanda: <span class="text-white font-bold">${met.enviar} envios</span> (${comp})</p>
+                            <p class="text-slate-400">Total Solto: <span class="text-white font-bold">${met.pecasTotais} pçs</span></p>
+                        </div>
+                        <div class="text-right bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                            <p class="text-[9px] text-emerald-500 font-bold uppercase">Uso de Chapa</p>
+                            <p class="text-sm font-black text-emerald-300">${met.placasUsadas.toFixed(2)}</p>
+                        </div>
+                    </div>
+                `;
+                listaMateria.appendChild(cardMat);
+
+                // PRODUÇÃO
+                const horas = Math.floor(met.tempoMinutos / 60);
+                const mins = Math.round(met.tempoMinutos % 60);
+                const tempoStr = horas > 0 ? `${horas}h ${mins}m` : `${mins} min`;
+
+                const cardProd = document.createElement('div');
+                cardProd.className = "bg-slate-800 border-l-4 border-purple-500 rounded-r-xl p-3 shadow-sm";
+                cardProd.innerHTML = `
+                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
+                    <div class="flex justify-between items-center text-xs">
+                        <div>
+                            <p class="text-slate-400">Velocidade: <span class="text-white font-bold">${regra.tempoPorPlaca} min/placa</span></p>
+                            <p class="text-slate-400">Processamento: <span class="text-white font-bold">${met.placasUsadas.toFixed(2)} placas</span></p>
+                        </div>
+                        <div class="text-right bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                            <p class="text-[9px] text-purple-400 font-bold uppercase">Tempo Corte</p>
+                            <p class="text-sm font-black text-purple-300">${tempoStr}</p>
+                        </div>
+                    </div>
+                `;
+                listaProducao.appendChild(cardProd);
+
+                // FINANCEIRO
+                let corMargem = met.margem >= 20 ? 'text-green-400 border-green-500' : (met.margem >= 10 ? 'text-yellow-400 border-yellow-500' : 'text-red-400 border-red-500');
+                
+                const cardFin = document.createElement('div');
+                cardFin.className = "bg-slate-800 border-l-4 border-amber-500 rounded-r-xl p-3 shadow-sm";
+                cardFin.innerHTML = `
+                    <h2 class="text-[12px] font-bold text-slate-200 leading-snug truncate mb-2">${p.titulo}</h2>
+                    <div class="grid grid-cols-4 gap-1.5 pt-1 text-center">
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                            <span class="block text-[8px] text-slate-400 uppercase">Preço</span>
+                            <span class="text-[11px] font-bold text-slate-200">${formatarReal(p.preco)}</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                            <span class="block text-[8px] text-slate-400 uppercase">Custo UN</span>
+                            <span class="text-[11px] font-bold text-red-300">${formatarReal(met.custoTotalItem)}</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-1.5 rounded flex flex-col justify-center">
+                            <span class="block text-[8px] text-slate-400 uppercase">Lucro UN</span>
+                            <span class="text-[11px] font-bold text-emerald-400">${formatarReal(met.lucroLiquido)}</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-1.5 rounded border ${corMargem.split(' ')[1]} flex flex-col justify-center">
+                            <span class="block text-[8px] text-slate-400 uppercase">Margem</span>
+                            <span class="text-[12px] font-black ${corMargem.split(' ')[0]}">${met.margem.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                `;
+                listaFinanceiro.appendChild(cardFin);
+            });
+
+            document.getElementById('resumo-pecas-soltas').innerText = `${totalPecasSoltas} pçs`;
+            document.getElementById('resumo-placas').innerText = totalPlacas.toFixed(1);
+            const hTotal = Math.floor(totalMinutos / 60); const mTotal = Math.round(totalMinutos % 60);
+            document.getElementById('resumo-tempo').innerText = `${hTotal}h ${mTotal}m`;
+            
+            document.getElementById('resumo-custo').innerText = formatarReal(custoEnvioTotal);
+            document.getElementById('resumo-lucro').innerText = formatarReal(lucroEnvioTotal);
         }
 
         function ordenar(criterio, forcarRender = false) {
@@ -112,61 +391,60 @@
                 }
             }
 
-            const diasMeta = parseInt(document.getElementById('input-dias').value) || 30;
-
             produtosGlobais.sort((a, b) => {
+                const mA = calcularMetricas(a); const mB = calcularMetricas(b);
                 let valorA, valorB;
-                if (criterio === 'criticos') { valorA = a.semanas_7d; valorB = b.semanas_7d; }
-                else if (criterio === 'estoque') { valorA = a.estoque; valorB = b.estoque; }
-                else if (criterio === 'vendas') { valorA = a.vendas_7d; valorB = b.vendas_7d; }
-                else if (criterio === 'enviar') { 
-                    valorA = calcularAEnviar(a, diasMeta); 
-                    valorB = calcularAEnviar(b, diasMeta); 
-                }
+                
+                if (criterio === 'criticos') { valorA = mA.semanasCobertura; valorB = mB.semanasCobertura; }
+                else if (criterio === 'vendas') { valorA = mA.vendas; valorB = mB.vendas; }
+                else if (criterio === 'enviar') { valorA = mA.enviar; valorB = mB.enviar; }
+                
                 if (valorA < valorB) return ordemAtual.crescente ? -1 : 1;
                 if (valorA > valorB) return ordemAtual.crescente ? 1 : -1;
                 return 0;
             });
 
-            atualizarEstiloBotoes();
-            renderizarProdutos(produtosGlobais, diasMeta);
+            ['criticos', 'enviar', 'vendas'].forEach(c => {
+                document.getElementById(`btn-${c}`).className = "bg-slate-800 border border-slate-700 text-slate-200 px-2 py-1.5 rounded-lg";
+            });
+            const btnAtivo = document.getElementById(`btn-${ordemAtual.criterio}`);
+            if(btnAtivo) {
+                btnAtivo.className = "bg-blue-600 border border-blue-500 text-white px-2 py-1.5 rounded-lg font-medium shadow-md";
+                const textoOriginal = btnAtivo.innerText.replace(' ↑', '').replace(' ↓', '');
+                btnAtivo.innerText = textoOriginal + (ordemAtual.crescente ? ' ↑' : ' ↓');
+            }
+
+            renderizarAbaEnvio();
         }
 
-        function renderizarProdutos(lista, diasMeta) {
+        function renderizarAbaEnvio() {
             const container = document.getElementById('lista-produtos');
             container.innerHTML = '';
             
-            let totalPecas = 0;
-            let totalValor = 0;
+            let totalKits = 0; let totalValor = 0;
 
-            lista.forEach(p => {
-                const qtdEnviar = calcularAEnviar(p, diasMeta);
-                totalPecas += qtdEnviar;
-                totalValor += (qtdEnviar * p.preco);
+            produtosGlobais.forEach(p => {
+                const met = calcularMetricas(p);
+                totalKits += met.enviar;
+                totalValor += (met.enviar * p.preco);
 
-                // Lógica do Semáforo
-                let corSemaforo = '';
-                let textoSemaforo = '';
-                const diasCobertura = p.semanas_7d * 7;
+                const diasCobertura = met.semanasCobertura * 7;
+                let corSemaforo, textoSemaforo;
 
-                if (p.semanas_7d === 999 || p.vendas_7d === 0) {
-                    corSemaforo = 'bg-slate-700 text-slate-300 border-slate-600';
-                    textoSemaforo = '⚪ Parado';
+                if (met.semanasCobertura === 999 || met.vendas === 0) {
+                    corSemaforo = 'bg-slate-700 text-slate-300'; textoSemaforo = '⚪ Parado';
                 } else if (diasCobertura <= 7) {
-                    corSemaforo = 'bg-red-500/20 text-red-400 border-red-500/30';
-                    textoSemaforo = '🔴 Urgente';
+                    corSemaforo = 'bg-red-500/20 text-red-400 border-red-500/30'; textoSemaforo = '🔴 Urgente';
                 } else if (diasCobertura <= 14) {
-                    corSemaforo = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-                    textoSemaforo = '🟡 Atenção';
-                } else if (diasCobertura > (diasMeta + 15)) {
-                    corSemaforo = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-                    textoSemaforo = '🔵 Excesso';
+                    corSemaforo = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'; textoSemaforo = '🟡 Atenção';
+                } else if (diasCobertura > (configApp.diasMeta + 15)) {
+                    corSemaforo = 'bg-blue-500/20 text-blue-400 border-blue-500/30'; textoSemaforo = '🔵 Excesso';
                 } else {
-                    corSemaforo = 'bg-green-500/20 text-green-400 border-green-500/30';
-                    textoSemaforo = '🟢 Saudável';
+                    corSemaforo = 'bg-green-500/20 text-green-400 border-green-500/30'; textoSemaforo = '🟢 Saudável';
                 }
 
-                const corEnviar = qtdEnviar > 0 ? 'text-green-400' : 'text-slate-500';
+                const corEnviar = met.enviar > 0 ? 'text-green-400' : 'text-slate-500';
+                const textoCobertura = met.semanasCobertura === 999 ? 'Parado' : met.semanasCobertura.toFixed(1) + ' sem.';
                 
                 const card = document.createElement('div');
                 card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md flex flex-col gap-2.5 relative";
@@ -182,25 +460,126 @@
                             <span class="text-[13px] font-bold text-blue-400">${p.estoque}</span>
                         </div>
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Vendas</span>
-                            <span class="text-[13px] font-bold text-slate-200">${p.vendas_7d} un</span>
+                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Vend. ${configApp.periodoBase}d</span>
+                            <span class="text-[13px] font-bold text-slate-200">${met.vendas} un</span>
                         </div>
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center items-center">
-                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Preço</span>
-                            <span class="text-[11px] font-bold text-emerald-400 whitespace-nowrap">R$ ${p.preco.toFixed(2).replace('.', ',')}</span>
+                            <span class="block text-[9px] text-slate-400 uppercase tracking-wider">Cobert.</span>
+                            <span class="text-[12px] font-bold text-slate-300 whitespace-nowrap">${textoCobertura}</span>
                         </div>
                         <div class="bg-slate-900/50 p-1.5 rounded-lg flex flex-col justify-center border border-slate-700/50">
                             <span class="block text-[9px] text-slate-400 uppercase tracking-wider">A Enviar</span>
-                            <span class="text-[13px] font-bold ${corEnviar}">+${qtdEnviar}</span>
+                            <span class="text-[13px] font-black ${corEnviar}">+${met.enviar}</span>
                         </div>
                     </div>
                 `;
                 container.appendChild(card);
             });
 
-            // Atualiza os painéis de resumo
-            document.getElementById('resumo-pecas').innerText = `${totalPecas} un`;
-            document.getElementById('resumo-valor').innerText = totalValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+            document.getElementById('resumo-pecas').innerText = `${totalKits} un`;
+            document.getElementById('resumo-valor').innerText = formatarReal(totalValor);
+        }
+
+        function abrirConfiguracoes() {
+            document.getElementById('cfg-dias').value = configApp.diasMeta;
+            document.getElementById('cfg-base').value = configApp.periodoBase;
+            document.getElementById('cfg-margem').value = configApp.margemSeguranca;
+            document.getElementById('cfg-imposto').value = configApp.imposto;
+            document.getElementById('cfg-taxafixa').value = configApp.taxaFixaML;
+
+            const listaRegras = document.getElementById('lista-regras');
+            listaRegras.innerHTML = '';
+
+            produtosGlobais.forEach((p, index) => {
+                const regra = regrasFabrica[p.titulo] || { pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, custoChapa: 80, comissaoML: 14, custoEmbalagem: 1.5 };
+                const displayKit = regra.isKit ? 'block' : 'hidden';
+                const checkedKit = regra.isKit ? 'checked' : '';
+
+                const html = `
+                    <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700">
+                        <p class="text-[11px] font-bold text-emerald-400 mb-2 leading-tight truncate" title="${p.titulo}">${p.titulo}</p>
+                        
+                        <div class="grid grid-cols-2 gap-2 text-[10px]">
+                            <div>
+                                <label class="block text-slate-400 mb-1">Custo da Chapa (R$)</label>
+                                <input type="number" step="0.01" id="cfg-custo-${index}" value="${regra.custoChapa}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1">Peças P/ Placa</label>
+                                <input type="number" id="cfg-placa-${index}" value="${regra.pecasPorPlaca}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1">Tempo P/ Placa (min)</label>
+                                <input type="number" id="cfg-tempo-${index}" value="${regra.tempoPorPlaca}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            </div>
+                            <div class="col-span-2 flex items-center gap-2 mt-1">
+                                <input type="checkbox" id="cfg-iskit-${index}" ${checkedKit} onchange="toggleKit(${index})" class="w-3 h-3">
+                                <label class="text-slate-300 font-bold">É Composto por Kit?</label>
+                            </div>
+                            <div id="box-kit-${index}" class="col-span-2 ${displayKit}">
+                                <label class="block text-slate-400 mb-1 text-[10px]">Quantas peças compõem o kit?</label>
+                                <input type="number" id="cfg-qtdkit-${index}" value="${regra.pecasPorKit}" class="bg-slate-800 border border-emerald-600/50 rounded px-2 py-1 w-full text-white">
+                            </div>
+                            <div class="col-span-2 mt-2 pt-2 border-t border-slate-700">
+                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-2">Custos de Venda</p>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1">Comissão ML (%)</label>
+                                <input type="number" step="0.1" id="cfg-comissao-${index}" value="${regra.comissaoML}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1">Embalagem (R$)</label>
+                                <input type="number" step="0.01" id="cfg-embalagem-${index}" value="${regra.custoEmbalagem}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listaRegras.insertAdjacentHTML('beforeend', html);
+            });
+            document.getElementById('modal-config').classList.remove('hidden');
+        }
+
+        function toggleKit(index) {
+            const isKit = document.getElementById(`cfg-iskit-${index}`).checked;
+            document.getElementById(`box-kit-${index}`).className = isKit ? "col-span-2 block" : "col-span-2 hidden";
+        }
+
+        function fecharConfiguracoes() {
+            document.getElementById('modal-config').classList.add('hidden');
+        }
+
+        async function salvarConfiguracoes() {
+            const btn = document.getElementById('btn-salvar-txt');
+            btn.innerText = 'Salvando...';
+
+            configApp.diasMeta = parseInt(document.getElementById('cfg-dias').value) || 30;
+            configApp.periodoBase = parseInt(document.getElementById('cfg-base').value) || 30;
+            configApp.margemSeguranca = parseFloat(document.getElementById('cfg-margem').value) || 0;
+            configApp.imposto = parseFloat(document.getElementById('cfg-imposto').value) || 0;
+            configApp.taxaFixaML = parseFloat(document.getElementById('cfg-taxafixa').value) || 0;
+
+            produtosGlobais.forEach((p, index) => {
+                regrasFabrica[p.titulo] = {
+                    custoChapa: parseFloat(document.getElementById(`cfg-custo-${index}`).value) || 0,
+                    pecasPorPlaca: parseFloat(document.getElementById(`cfg-placa-${index}`).value) || 1,
+                    tempoPorPlaca: parseFloat(document.getElementById(`cfg-tempo-${index}`).value) || 1,
+                    isKit: document.getElementById(`cfg-iskit-${index}`).checked,
+                    pecasPorKit: parseFloat(document.getElementById(`cfg-qtdkit-${index}`).value) || 1,
+                    comissaoML: parseFloat(document.getElementById(`cfg-comissao-${index}`).value) || 0,
+                    custoEmbalagem: parseFloat(document.getElementById(`cfg-embalagem-${index}`).value) || 0
+                };
+            });
+
+            await supabase.from('configuracoes').upsert({
+                id: 'padrao',
+                globais: configApp,
+                regras: regrasFabrica
+            });
+
+            btn.innerText = '💾 Salvar na Nuvem';
+            fecharConfiguracoes();
+            ordenar(ordemAtual.criterio, true);
+            processarAbasFabricaFinanceiro(); 
         }
 
         document.addEventListener('DOMContentLoaded', carregarDados);
