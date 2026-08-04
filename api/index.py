@@ -6,11 +6,9 @@ import json
 import requests
 from urllib.parse import urlparse, parse_qs
 
-# Credenciais do seu App (Fixas)
 CLIENT_ID = "1194661319744999"
 CLIENT_SECRET = "0GnE2ffoGHUkit67Zl3aQrXlIRs2Ck6U"
 
-# Senhas invisíveis do Banco de Dados que a Vercel gera
 KV_URL = os.environ.get("KV_REST_API_URL") or os.environ.get("UPSTASH_REDIS_REST_URL")
 KV_TOKEN = os.environ.get("KV_REST_API_TOKEN") or os.environ.get("UPSTASH_REDIS_REST_TOKEN")
 
@@ -34,9 +32,6 @@ class handler(BaseHTTPRequestHandler):
         parsed_path = urlparse(self.path)
         qs = parse_qs(parsed_path.query)
 
-        # ---------------------------------------------------------
-        # FUNÇÃO MÁGICA: Gravar o primeiro token no banco de dados!
-        # ---------------------------------------------------------
         if 'code' in qs:
             code = qs['code'][0]
             payload = {
@@ -48,29 +43,20 @@ class handler(BaseHTTPRequestHandler):
             }
             resp = requests.post("https://api.mercadolibre.com/oauth/token", data=payload)
             if resp.status_code == 200:
-                tokens = resp.json()
-                redis_set("ml_tokens", tokens)
+                redis_set("ml_tokens", resp.json())
                 self.send_response(200)
                 self.send_header("Content-type", "application/json; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(json.dumps({"sucesso": "✅ BANCO CONFIGURADO PARA SEMPRE! Pode fechar esta aba e abrir o seu Painel."}).encode('utf-8'))
-            else:
-                self.send_response(400)
-                self.send_header("Content-type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"erro": "Falha no codigo TG, gere outro", "detalhe": resp.text}).encode('utf-8'))
+                self.wfile.write(json.dumps({"sucesso": "✅ BANCO CONFIGURADO PARA SEMPRE!"}).encode('utf-8'))
             return
 
         try:
-            # ---------------------------------------------------------
-            # FLUXO AUTÔNOMO: Ler do banco e renovar sozinho se vencer
-            # ---------------------------------------------------------
             tokens = redis_get("ml_tokens")
             if not tokens:
                 self.send_response(401)
                 self.send_header("Content-type", "application/json; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Banco vazio. Faça a ativação inicial com a URL especial."}).encode("utf-8"))
+                self.wfile.write(json.dumps({"error": "Banco vazio. Cadastre o token inicial."}).encode("utf-8"))
                 return
 
             access_token = tokens.get("access_token")
@@ -79,10 +65,8 @@ class handler(BaseHTTPRequestHandler):
             session = requests.Session()
             session.headers.update({"Authorization": f"Bearer {access_token}", "User-Agent": "Mozilla/5.0"})
 
-            # Testa se a chave atual ainda funciona
             resp_user = session.get("https://api.mercadolibre.com/users/me", timeout=5)
             
-            # Se deu erro, significa que as 6 horas passaram. O Python renova sozinho!
             if resp_user.status_code != 200:
                 payload = {
                     "grant_type": "refresh_token",
@@ -91,39 +75,53 @@ class handler(BaseHTTPRequestHandler):
                     "refresh_token": refresh_token
                 }
                 resp_refresh = requests.post("https://api.mercadolibre.com/oauth/token", data=payload)
-                
                 if resp_refresh.status_code == 200:
                     tokens = resp_refresh.json()
-                    redis_set("ml_tokens", tokens) # Salva a chave nova no banco
-                    access_token = tokens.get("access_token")
-                    session.headers.update({"Authorization": f"Bearer {access_token}"})
+                    redis_set("ml_tokens", tokens)
+                    session.headers.update({"Authorization": f"Bearer {tokens.get('access_token')}"})
                     resp_user = session.get("https://api.mercadolibre.com/users/me", timeout=5)
                 else:
                     self.send_response(401)
                     self.send_header("Content-type", "application/json")
                     self.end_headers()
-                    self.wfile.write(json.dumps({"error": "Ocorreu um erro na renovação."}).encode("utf-8"))
+                    self.wfile.write(json.dumps({"error": "Ocorreu um erro na renovação do token."}).encode("utf-8"))
                     return
 
             user_id = resp_user.json().get("id")
             hoje = datetime.now(timezone.utc)
-            data_7_dias = (hoje - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00.000-00:00")
+            # Varrendo os últimos 30 dias de vendas de uma vez
+            data_30_dias = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00.000-00:00")
             
             def fetch_orders():
                 vendas = {}
                 offset = 0
                 while True:
-                    url = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_7_dias}&offset={offset}&limit=50"
+                    url = f"https://api.mercadolibre.com/orders/search?seller={user_id}&order.status=paid&order.date_created.from={data_30_dias}&offset={offset}&limit=50"
                     resp = session.get(url, timeout=5)
                     if resp.status_code != 200: break
                     dados = resp.json()
                     resultados = dados.get("results", [])
                     if not resultados: break
+                    
                     for pedido in resultados:
+                        data_criacao_str = pedido.get("date_created", "")[:19]
+                        try:
+                            data_pedido = datetime.strptime(data_criacao_str, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+                            dias_atras = (hoje - data_pedido).days
+                        except:
+                            dias_atras = 0
+
                         for item in pedido.get("order_items", []):
                             item_id = item.get("item", {}).get("id")
-                            qtd = item.get("quantity", 0)
-                            if item_id: vendas[item_id] = vendas.get(item_id, 0) + int(qtd)
+                            qtd = int(item.get("quantity", 0))
+                            if item_id:
+                                if item_id not in vendas:
+                                    vendas[item_id] = {"7d": 0, "15d": 0, "30d": 0}
+                                
+                                vendas[item_id]["30d"] += qtd
+                                if dias_atras <= 15: vendas[item_id]["15d"] += qtd
+                                if dias_atras <= 7: vendas[item_id]["7d"] += qtd
+                                
                     offset += 50
                     if offset >= dados.get("paging", {}).get("total", 0): break
                 return vendas
@@ -150,7 +148,7 @@ class handler(BaseHTTPRequestHandler):
                 item_ids = future_items.result()
 
             relatorio = []
-            IDs_com_estoque_misturado = []
+            IDs_com_estoque_misturado = [] # Deixe vazio para não zerar os kits display
             chunks = [item_ids[i:i + 20] for i in range(0, len(item_ids), 20)]
             
             for chunk in chunks:
@@ -170,22 +168,17 @@ class handler(BaseHTTPRequestHandler):
                     
                     if item_id in IDs_com_estoque_misturado: estoque_full = 0
 
-                    vendas_7d = int(vendas.get(item_id, 0))
-                    venda_diaria_7d = vendas_7d / 7.0
-                    semanas_7d = float(estoque_full / (venda_diaria_7d * 7)) if venda_diaria_7d > 0 else 999.0
-                    estoque_ideal_60d = venda_diaria_7d * 60
-                    enviar_60d = int(max(0, round(estoque_ideal_60d - estoque_full)))
+                    vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
 
                     relatorio.append({
                         "titulo": titulo,
                         "estoque": estoque_full,
-                        "vendas_7d": vendas_7d,
-                        "semanas_7d": round(semanas_7d, 1),
-                        "enviar_60d": enviar_60d,
+                        "vendas_7d": vendas_item["7d"],
+                        "vendas_15d": vendas_item["15d"],
+                        "vendas_30d": vendas_item["30d"],
                         "preco": preco
                     })
 
-            relatorio.sort(key=lambda x: x["enviar_60d"], reverse=True)
             self.send_response(200)
             self.send_header("Content-type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
