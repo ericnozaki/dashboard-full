@@ -164,20 +164,9 @@ class handler(BaseHTTPRequestHandler):
                     estoque_full = int(item_data.get("available_quantity", 0))
                     preco = float(item_data.get("price", 0.0))
                     
-                    # Identifica comissão com base no tipo de anúncio (gold_pro = Premium ~17-18%, gold_special = Clássico ~11-12%)
+                    # Taxas cravadas exatas (16.5% Premium e 11.5% Clássico)
                     listing_type = item_data.get("listing_type_id", "")
-                    comissao_perc = 17.5 if "pro" in listing_type else 12.0
-
-                    # Extrai custo de envio do Full se disponível na API de custos/shipping
-                    shipping_cost = 0.0
-                    try:
-                        shipping_info = item_data.get("shipping", {})
-                        # Se houver custo de frete gratis subsidiado ou tarifa fixa associada
-                        # O ML costuma expor isso no sale_fee ou shipping free
-                        free_shipping = shipping_info.get("free_shipping", False)
-                        # Caso queira refinar, podemos estimar ou puxar da API de fretes
-                    except:
-                        pass
+                    comissao_perc = 16.5 if "pro" in listing_type else 11.5
 
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
 
