@@ -162,23 +162,40 @@ class handler(BaseHTTPRequestHandler):
                     item_id = item_data.get("id")
                     titulo = str(item_data.get("title", ""))
                     estoque_full = int(item_data.get("available_quantity", 0))
+                    
+                    # PREÇO CHEIO DO PRODUTO PAI
                     preco_base = float(item_data.get("price", 0.0))
                     
-                    # Tenta buscar se o item possui preço promocional ativo na API de promoções do ML
+                    # =========================================================
+                    # CAÇADOR DE PREÇOS PROMOCIONAIS (Automático)
+                    # =========================================================
                     preco_final = preco_base
+
+                    # 1. Verifica se há um preço com desconto no objeto "sale_price"
+                    if item_data.get("sale_price") and item_data["sale_price"].get("amount"):
+                        val_sale = float(item_data["sale_price"]["amount"])
+                        if val_sale < preco_final: 
+                            preco_final = val_sale
+
+                    # 2. Verifica nas Variações do Anúncio
+                    for var in item_data.get("variations", []):
+                        v_price = var.get("price")
+                        if v_price and float(v_price) < preco_final:
+                            preco_final = float(v_price)
+
+                    # 3. Verifica na Rota Oficial de Campanhas (Co-participação, Ofertas Especiais)
                     try:
-                        resp_promo = session.get(f"https://api.mercadolibre.com/items/{item_id}/promotions", timeout=3)
+                        resp_promo = session.get(f"https://api.mercadolibre.com/seller-promotions/promotions/applies-to/{item_id}", timeout=3)
                         if resp_promo.status_code == 200:
-                            promo_data = resp_promo.json()
-                            # Verifica se existe promoção do tipo 'price_reduction' ou 'campaign' ativa com preço promocional
-                            if isinstance(promo_data, dict):
-                                promocoes_ativas = promo_data.get("promotions", []) or [promo_data]
-                                for p in promocoes_ativas:
-                                    if p.get("status") == "active" and p.get("price"):
-                                        preco_final = float(p.get("price"))
-                                        break
+                            for p in resp_promo.json():
+                                status = p.get("status")
+                                if status in ["started", "active"]:
+                                    p_price = p.get("target_price") or p.get("promotional_price") or p.get("price")
+                                    if p_price and float(p_price) < preco_final:
+                                        preco_final = float(p_price)
                     except:
                         pass
+                    # =========================================================
 
                     listing_type = item_data.get("listing_type_id", "")
                     comissao_perc = 16.5 if "pro" in listing_type else 11.5
@@ -192,7 +209,7 @@ class handler(BaseHTTPRequestHandler):
                         "vendas_7d": vendas_item["7d"],
                         "vendas_15d": vendas_item["15d"],
                         "vendas_30d": vendas_item["30d"],
-                        "preco": preco_final,  # Já puxa o preço promocional automaticamente se houver
+                        "preco": preco_final,
                         "comissao_ml": comissao_perc
                     })
 
