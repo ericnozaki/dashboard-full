@@ -34,10 +34,10 @@
         </header>
 
         <div class="flex gap-1 mb-4 bg-slate-800 p-1 rounded-lg shadow-sm border border-slate-700 overflow-x-auto text-xs font-bold">
-            <button onclick="mudarAba('aba-envio')" id="btn-aba-envio" class="flex-1 min-w-[90px] py-2.5 rounded-md transition bg-blue-600 text-white shadow-sm">🚚 ENVIO</button>
+            <button onclick="mudarAba('aba-envio')" id="btn-aba-envio" class="flex-1 min-w-[90px] py-2.5 rounded-md transition bg-blue-600 text-white shadow-sm">🚚 ENVIO (FULL)</button>
             <button onclick="mudarAba('aba-materia')" id="btn-aba-materia" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">🛠️ MATÉRIAS</button>
             <button onclick="mudarAba('aba-producao')" id="btn-aba-producao" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">⏱️ PRODUÇÃO</button>
-            <button onclick="mudarAba('aba-financeiro')" id="btn-aba-financeiro" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">💰 FINANCEIRO</button>
+            <button onclick="mudarAba('aba-financeiro')" id="btn-aba-financeiro" class="flex-1 min-w-[90px] py-2.5 rounded-md transition text-slate-400 hover:text-slate-200">💰 FINANÇAS GERAL</button>
         </div>
 
         <div id="loading" class="text-center py-12 text-slate-400 text-sm animate-pulse">⚡ Conectando ao painel e carregando dados...</div>
@@ -46,7 +46,7 @@
             <div id="aba-envio" class="conteudo-aba hidden space-y-4">
                 <div class="bg-gradient-to-r from-blue-900 to-slate-800 border border-blue-700/50 p-4 rounded-xl shadow-md flex justify-between items-center">
                     <div>
-                        <p class="text-[10px] md:text-xs text-blue-400 font-bold uppercase tracking-wider mb-0.5">Kits a Enviar</p>
+                        <p class="text-[10px] md:text-xs text-blue-400 font-bold uppercase tracking-wider mb-0.5">Kits a Enviar (Full)</p>
                         <p id="resumo-pecas" class="text-xl md:text-2xl font-black text-white">0 un</p>
                     </div>
                     <div class="text-right">
@@ -65,7 +65,7 @@
 
             <div id="aba-materia" class="conteudo-aba hidden space-y-4">
                 <div class="bg-gradient-to-r from-emerald-900 to-slate-800 border border-emerald-700/50 p-4 rounded-xl shadow-md">
-                    <p class="text-xs text-emerald-400 font-bold uppercase tracking-wider mb-2">Resumo Geral de Matéria-Prima</p>
+                    <p class="text-xs text-emerald-400 font-bold uppercase tracking-wider mb-2">Resumo de Matéria-Prima (Reposição Full)</p>
                     <div id="resumo-chapas-geral" class="space-y-1.5 text-sm font-black text-white"></div>
                 </div>
                 <div id="lista-materia" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
@@ -74,7 +74,7 @@
             <div id="aba-producao" class="conteudo-aba hidden space-y-4">
                 <div class="bg-gradient-to-r from-purple-900 to-slate-800 border border-purple-700/50 p-4 rounded-xl shadow-md flex justify-center items-center text-center">
                     <div>
-                        <p class="text-xs text-purple-400 font-bold uppercase tracking-wider mb-0.5">Tempo Estimado (Laser)</p>
+                        <p class="text-xs text-purple-400 font-bold uppercase tracking-wider mb-0.5">Tempo Estimado (Reposição Full)</p>
                         <p id="resumo-tempo" class="text-3xl font-black text-purple-300">00h 00m</p>
                     </div>
                 </div>
@@ -84,15 +84,15 @@
             <div id="aba-financeiro" class="conteudo-aba hidden space-y-4">
                 <div class="bg-gradient-to-r from-amber-900 to-slate-800 border border-amber-700/50 p-4 rounded-xl shadow-md flex justify-between items-center">
                     <div>
-                        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5" title="Custo total dos materiais que serão cortados no novo lote de envio">Custo Total (Lote de Envio)</p>
+                        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5" title="Custo total de fabricação e taxas de TODO o catálogo listado abaixo">Custo Base (Catálogo Exibido)</p>
                         <p id="resumo-custo" class="text-xl md:text-2xl font-black text-white">R$ 0,00</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5" title="Lucro líquido esperado das peças que serão enviadas neste lote">Lucro Líquido (Lote de Envio)</p>
+                        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5" title="Lucro líquido total se vendesse 1 unidade de cada produto abaixo">Lucro Un. (Catálogo Exibido)</p>
                         <p id="resumo-lucro" class="text-xl md:text-2xl font-black text-amber-300">R$ 0,00</p>
                     </div>
                 </div>
-                <!-- Esta lista mostrará TODOS os produtos do catálogo sem filtro -->
+                <!-- Exibe todos os produtos não ocultos -->
                 <div id="lista-financeiro" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
         </div>
@@ -142,7 +142,7 @@
                 </div>
 
                 <div>
-                    <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2">Ficha Técnica & Custos (Por Produto)</h3>
+                    <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2">Ficha Técnica & Controle de Ocultar</h3>
                     <div id="lista-regras" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1"></div>
                 </div>
 
@@ -221,13 +221,18 @@
                         regrasFabrica[p.titulo] = { 
                             material: Object.keys(catalogoChapas)[0] || "PS 2mm",
                             pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, 
-                            comissaoML: p.comissao_ml, custoEnvio: 6.75, custoEmbalagem: 1.50
+                            comissaoML: p.comissao_ml, custoEnvio: 6.75, custoEmbalagem: 1.50,
+                            oculto: false
                         };
                         precisaAtualizarBanco = true;
                     } else {
                         regrasFabrica[p.titulo].comissaoML = p.comissao_ml;
                         if(regrasFabrica[p.titulo].precoPromo !== undefined) {
-                            delete regrasFabrica[p.titulo].precoPromo; // Limpa gambiarra manual
+                            delete regrasFabrica[p.titulo].precoPromo; // Limpa gambiarra antiga
+                            precisaAtualizarBanco = true;
+                        }
+                        if (regrasFabrica[p.titulo].oculto === undefined) {
+                            regrasFabrica[p.titulo].oculto = false;
                             precisaAtualizarBanco = true;
                         }
                     }
@@ -275,8 +280,6 @@
             const enviar = Math.max(0, Math.round(estoqueIdeal - produto.estoque));
             
             const regra = regrasFabrica[produto.titulo];
-            
-            // AGORA É 100% AUTOMÁTICO - Puxa do back-end (última venda confirmada)
             const precoAtivo = parseFloat(produto.preco) || 0;
 
             const custoChapa = catalogoChapas[regra.material] || 0;
@@ -309,13 +312,12 @@
             document.getElementById('lista-financeiro').innerHTML = ''; 
             document.getElementById('resumo-chapas-geral').innerHTML = '';
 
-            let custoEnvioTotal = 0; let lucroEnvioTotal = 0; let chapasPorMaterial = {}; let totalMinutos = 0;
+            let totalMinutos = 0; let chapasPorMaterial = {};
+            let custoFinTotal = 0; let lucroFinTotal = 0;
 
-            // 1. Matéria-Prima e Produção: processa APENAS os produtos que precisam de reposição de estoque
-            produtosGlobais.filter(p => calcularMetricas(p).enviar > 0).forEach(p => {
+            // 1. Matéria-Prima e Produção: APENAS ativos do FULL que precisam ser enviados e NÃO estão ocultos
+            produtosGlobais.filter(p => !regrasFabrica[p.titulo]?.oculto && p.is_full && calcularMetricas(p).enviar > 0).forEach(p => {
                 const met = calcularMetricas(p);
-                custoEnvioTotal += (met.custoTotalItem * met.enviar);
-                lucroEnvioTotal += (met.lucroLiquido * met.enviar);
                 chapasPorMaterial[met.material] = (chapasPorMaterial[met.material] || 0) + met.placasUsadas;
                 totalMinutos += met.tempoMinutos;
 
@@ -342,18 +344,25 @@
                     </div>`;
             });
 
-            // 2. Financeiro Geral: processa TODOS os produtos da API sem nenhum filtro de "enviar"
-            produtosGlobais.forEach(p => {
+            // 2. Financeiro Geral: Exibe TODO O CATÁLOGO (Full ou Normal), desde que NÃO esteja oculto
+            produtosGlobais.filter(p => !regrasFabrica[p.titulo]?.oculto).forEach(p => {
                 const met = calcularMetricas(p);
+                custoFinTotal += met.custoTotalItem;
+                lucroFinTotal += met.lucroLiquido;
+                
                 let corMargem = met.margem >= 20 ? 'text-green-400 border-green-500' : (met.margem >= 10 ? 'text-yellow-400 border-yellow-500' : 'text-red-400 border-red-500');
+                let tagFull = p.is_full ? '<span class="text-[9px] bg-blue-900 text-blue-300 px-1 py-0.5 rounded">FULL</span>' : '';
                 
                 document.getElementById('lista-financeiro').innerHTML += `
                     <div class="bg-slate-800 border-l-4 border-amber-500 rounded-r-xl p-3 shadow-sm flex flex-col justify-between">
-                        <h2 class="text-[12px] font-bold text-slate-200 mb-2">${p.titulo}</h2>
+                        <div class="flex justify-between items-start gap-1 mb-2">
+                            <h2 class="text-[12px] font-bold text-slate-200">${p.titulo}</h2>
+                            ${tagFull}
+                        </div>
                         <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700 text-center">
                             <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
                                 <span class="block text-[8px] text-slate-400 uppercase">Preço Ativo</span>
-                                <span class="text-[11px] font-bold text-blue-300" title="Preço de venda capturado da API">R$ ${met.precoAtivo.toFixed(2)}</span>
+                                <span class="text-[11px] font-bold text-blue-300">R$ ${met.precoAtivo.toFixed(2)}</span>
                             </div>
                             <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
                                 <span class="block text-[8px] text-slate-400 uppercase">Custo UN</span>
@@ -376,8 +385,8 @@
             }
 
             document.getElementById('resumo-tempo').innerText = `${Math.floor(totalMinutos / 60)}h ${Math.round(totalMinutos % 60)}m`;
-            document.getElementById('resumo-custo').innerText = `R$ ${custoEnvioTotal.toFixed(2)}`;
-            document.getElementById('resumo-lucro').innerText = `R$ ${lucroEnvioTotal.toFixed(2)}`;
+            document.getElementById('resumo-custo').innerText = `R$ ${custoFinTotal.toFixed(2)}`;
+            document.getElementById('resumo-lucro').innerText = `R$ ${lucroFinTotal.toFixed(2)}`;
         }
 
         function ordenar(criterio, forcarRender = false) {
@@ -405,7 +414,10 @@
             document.getElementById('lista-produtos').innerHTML = '';
             let totalKits = 0; let totalValor = 0;
 
-            produtosGlobais.forEach(p => {
+            // Filtro Envio: Só exibe produtos NÃO ocultos e que sejam do envio FULL
+            const produtosEnvio = produtosGlobais.filter(p => !regrasFabrica[p.titulo]?.oculto && p.is_full);
+
+            produtosEnvio.forEach(p => {
                 const met = calcularMetricas(p);
                 totalKits += met.enviar;
                 totalValor += (met.enviar * met.precoAtivo);
@@ -459,7 +471,7 @@
                 const regra = regrasFabrica[p.titulo];
                 let opts = Object.keys(catalogoChapas).map(mat => `<option value="${mat}" ${regra.material === mat ? 'selected' : ''}>${mat}</option>`).join('');
                 document.getElementById('lista-regras').innerHTML += `
-                    <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700">
+                    <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 ${regra.oculto ? 'opacity-50' : ''}">
                         <p class="text-[11px] font-bold text-emerald-400 mb-2 truncate">${p.titulo}</p>
                         <div class="grid grid-cols-2 gap-2 text-[10px]">
                             <select id="cfg-material-${index}" class="col-span-2 bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white font-bold">${opts}</select>
@@ -468,6 +480,13 @@
                             <div><label class="text-slate-400">Comissão(%)</label><input type="number" step="0.1" id="cfg-comissao-${index}" value="${regra.comissaoML}" class="w-full bg-slate-800 px-2 py-1 text-white border border-slate-600 rounded"></div>
                             <div><label class="text-slate-400">Envio(R$)</label><input type="number" step="0.01" id="cfg-envio-${index}" value="${regra.custoEnvio}" class="w-full bg-slate-800 px-2 py-1 text-white border border-slate-600 rounded"></div>
                             <div class="col-span-2"><label class="text-slate-400">Embalagem(R$)</label><input type="number" step="0.01" id="cfg-embalagem-${index}" value="${regra.custoEmbalagem}" class="w-full bg-slate-800 px-2 py-1 text-white border border-slate-600 rounded"></div>
+                            
+                            <div class="col-span-2 mt-1 pt-2 border-t border-slate-700 flex items-center">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="cfg-oculto-${index}" ${regra.oculto ? 'checked' : ''} class="w-4 h-4 accent-red-500 rounded">
+                                    <span class="text-[10px] font-bold text-red-400 hover:text-red-300">🚫 Ocultar este anúncio de todo o painel</span>
+                                </label>
+                            </div>
                         </div>
                     </div>`;
             });
@@ -495,7 +514,8 @@
                     tempoPorPlaca: parseFloat(document.getElementById(`cfg-tempo-${index}`).value) || 1,
                     comissaoML: parseFloat(document.getElementById(`cfg-comissao-${index}`).value) || 0,
                     custoEnvio: parseFloat(document.getElementById(`cfg-envio-${index}`).value) || 0,
-                    custoEmbalagem: parseFloat(document.getElementById(`cfg-embalagem-${index}`).value) || 0
+                    custoEmbalagem: parseFloat(document.getElementById(`cfg-embalagem-${index}`).value) || 0,
+                    oculto: document.getElementById(`cfg-oculto-${index}`).checked
                 };
             });
 
@@ -503,6 +523,45 @@
             document.getElementById('btn-salvar-txt').innerText = '💾 Salvar na Nuvem';
             fecharConfiguracoes();
             carregarDados();
+        }
+
+        function gerarRelatorioPDF() {
+            document.getElementById('pdf-data').innerText = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('pdf-meta').innerText = configApp.diasMeta;
+
+            const resumoInsumos = document.getElementById('pdf-resumo-insumos');
+            resumoInsumos.innerHTML = '';
+            const corpoTabela = document.getElementById('pdf-tabela-corpo');
+            corpoTabela.innerHTML = '';
+
+            let chapasPorMaterial = {};
+            
+            // Só imprime no PDF produtos NÃO ocultos, do FULL, e que precisam de reposição
+            const produtosAEnviar = produtosGlobais.filter(p => !regrasFabrica[p.titulo]?.oculto && p.is_full && calcularMetricas(p).enviar > 0);
+
+            produtosAEnviar.forEach(p => {
+                const met = calcularMetricas(p);
+                chapasPorMaterial[met.material] = (chapasPorMaterial[met.material] || 0) + met.placasUsadas;
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-200";
+                tr.innerHTML = `
+                    <td class="py-1 px-2 font-medium">${p.titulo}</td>
+                    <td class="py-1 px-2">${met.material}</td>
+                    <td class="py-1 px-2 text-center font-bold text-blue-700">+${met.enviar}</td>
+                    <td class="py-1 px-2 text-center">${met.placasUsadas.toFixed(2)}</td>
+                `;
+                corpoTabela.appendChild(tr);
+            });
+
+            for (let [mat, qtd] of Object.entries(chapasPorMaterial)) {
+                const qtdArredondada = Math.ceil(qtd);
+                const div = document.createElement('div');
+                div.innerHTML = `• <strong>${mat}:</strong> ${qtd.toFixed(2)} usadas ➔ <strong>Comprar: ${qtdArredondada} chapas</strong>`;
+                resumoInsumos.appendChild(div);
+            }
+
+            window.print();
         }
 
         document.addEventListener('DOMContentLoaded', carregarDados);
