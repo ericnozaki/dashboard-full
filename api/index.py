@@ -109,17 +109,29 @@ class handler(BaseHTTPRequestHandler):
                             dias_atras = (hoje - data_pedido).days
                         except:
                             dias_atras = 0
+                            data_pedido = datetime.min.replace(tzinfo=timezone.utc)
 
                         for item in pedido.get("order_items", []):
                             item_id = item.get("item", {}).get("id")
                             qtd = int(item.get("quantity", 0))
+                            preco_pago = float(item.get("unit_price", 0.0))
+                            
                             if item_id:
                                 if item_id not in vendas:
-                                    vendas[item_id] = {"7d": 0, "15d": 0, "30d": 0}
+                                    vendas[item_id] = {
+                                        "7d": 0, "15d": 0, "30d": 0, 
+                                        "ultimo_preco": preco_pago, 
+                                        "data_ultimo_pedido": data_pedido
+                                    }
                                 
                                 vendas[item_id]["30d"] += qtd
                                 if dias_atras <= 15: vendas[item_id]["15d"] += qtd
                                 if dias_atras <= 7: vendas[item_id]["7d"] += qtd
+
+                                # CAPTURA DO PREÇO REAL: Grava o valor pago pelo cliente na venda mais recente
+                                if data_pedido > vendas[item_id]["data_ultimo_pedido"]:
+                                    vendas[item_id]["ultimo_preco"] = preco_pago
+                                    vendas[item_id]["data_ultimo_pedido"] = data_pedido
                                 
                     offset += 50
                     if offset >= dados.get("paging", {}).get("total", 0): break
@@ -162,45 +174,19 @@ class handler(BaseHTTPRequestHandler):
                     item_id = item_data.get("id")
                     titulo = str(item_data.get("title", ""))
                     estoque_full = int(item_data.get("available_quantity", 0))
-                    
-                    # PREÇO CHEIO DO PRODUTO PAI
                     preco_base = float(item_data.get("price", 0.0))
                     
-                    # =========================================================
-                    # CAÇADOR DE PREÇOS PROMOCIONAIS (Automático)
-                    # =========================================================
-                    preco_final = preco_base
+                    vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0, "ultimo_preco": 0.0})
+                    ultimo_preco_venda = vendas_item.get("ultimo_preco", 0.0)
 
-                    # 1. Verifica se há um preço com desconto no objeto "sale_price"
-                    if item_data.get("sale_price") and item_data["sale_price"].get("amount"):
-                        val_sale = float(item_data["sale_price"]["amount"])
-                        if val_sale < preco_final: 
-                            preco_final = val_sale
-
-                    # 2. Verifica nas Variações do Anúncio
-                    for var in item_data.get("variations", []):
-                        v_price = var.get("price")
-                        if v_price and float(v_price) < preco_final:
-                            preco_final = float(v_price)
-
-                    # 3. Verifica na Rota Oficial de Campanhas (Co-participação, Ofertas Especiais)
-                    try:
-                        resp_promo = session.get(f"https://api.mercadolibre.com/seller-promotions/promotions/applies-to/{item_id}", timeout=3)
-                        if resp_promo.status_code == 200:
-                            for p in resp_promo.json():
-                                status = p.get("status")
-                                if status in ["started", "active"]:
-                                    p_price = p.get("target_price") or p.get("promotional_price") or p.get("price")
-                                    if p_price and float(p_price) < preco_final:
-                                        preco_final = float(p_price)
-                    except:
-                        pass
-                    # =========================================================
+                    # Se houve venda recente, ele puxa o preço exato que o cliente pagou na plataforma!
+                    if ultimo_preco_venda > 0 and ultimo_preco_venda < preco_base:
+                        preco_final = ultimo_preco_venda
+                    else:
+                        preco_final = preco_base
 
                     listing_type = item_data.get("listing_type_id", "")
                     comissao_perc = 16.5 if "pro" in listing_type else 11.5
-
-                    vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
 
                     relatorio.append({
                         "id": item_id,
