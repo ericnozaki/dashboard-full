@@ -92,7 +92,7 @@
                         <p id="resumo-lucro" class="text-xl md:text-2xl font-black text-amber-300">R$ 0,00</p>
                     </div>
                 </div>
-                <!-- Esta lista mostrará TODOS os produtos do catálogo -->
+                <!-- Esta lista mostrará TODOS os produtos do catálogo sem filtro -->
                 <div id="lista-financeiro" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
         </div>
@@ -342,7 +342,7 @@
                     </div>`;
             });
 
-            // 2. Financeiro Geral: processa TODOS os produtos ativos no Full (mesmo os que não vão ser cortados hoje)
+            // 2. Financeiro Geral: processa TODOS os produtos da API sem nenhum filtro de "enviar"
             produtosGlobais.forEach(p => {
                 const met = calcularMetricas(p);
                 let corMargem = met.margem >= 20 ? 'text-green-400 border-green-500' : (met.margem >= 10 ? 'text-yellow-400 border-yellow-500' : 'text-red-400 border-red-500');
