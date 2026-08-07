@@ -169,9 +169,8 @@ class handler(BaseHTTPRequestHandler):
                     if item_json.get("code") != 200: continue
                     item_data = item_json.get("body", {})
                     
-                    # Garante que traz todos os anúncios ativos que estão no Full (Fulfillment)
-                    if item_data.get("shipping", {}).get("logistic_type") != "fulfillment": continue
-                    if item_data.get("status") != "active": continue
+                    # FILTROS REMOVIDOS COMPLETAMENTE AQUI!
+                    # O sistema puxa 100% dos produtos agora, pausados ou ativos, Full ou envio próprio.
 
                     item_id = item_data.get("id")
                     titulo = str(item_data.get("title", ""))
@@ -181,7 +180,6 @@ class handler(BaseHTTPRequestHandler):
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0, "ultimo_preco": 0.0})
                     ultimo_preco_venda = vendas_item.get("ultimo_preco", 0.0)
 
-                    # Se houve venda com desconto, usa o preço promocional. Se não, mantém o preço base do anúncio.
                     if ultimo_preco_venda > 0 and ultimo_preco_venda < preco_base:
                         preco_final = ultimo_preco_venda
                     else:
