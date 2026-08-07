@@ -47,7 +47,7 @@ class handler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-type", "application/json; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(json.dumps({"sucesso": "✅ BANCO CONFIGURADO PARA SEMPRE!"}).encode('utf-8'))
+                self.wfile.write(json.dumps({"sucesso": "✅ AUTORIZADO!"}).encode('utf-8'))
             return
 
         try:
@@ -56,7 +56,7 @@ class handler(BaseHTTPRequestHandler):
                 self.send_response(401)
                 self.send_header("Content-type", "application/json; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Banco vazio. Cadastre o token inicial."}).encode("utf-8"))
+                self.wfile.write(json.dumps({"error": "Token ausente."}).encode("utf-8"))
                 return
 
             access_token = tokens.get("access_token")
@@ -84,12 +84,11 @@ class handler(BaseHTTPRequestHandler):
                     self.send_response(401)
                     self.send_header("Content-type", "application/json")
                     self.end_headers()
-                    self.wfile.write(json.dumps({"error": "Ocorreu um erro na renovação do token."}).encode("utf-8"))
+                    self.wfile.write(json.dumps({"error": "Erro ao atualizar token."}).encode("utf-8"))
                     return
 
             user_id = resp_user.json().get("id")
             hoje = datetime.now(timezone.utc)
-            # Varrendo os últimos 30 dias de vendas de uma vez
             data_30_dias = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00.000-00:00")
             
             def fetch_orders():
@@ -148,7 +147,6 @@ class handler(BaseHTTPRequestHandler):
                 item_ids = future_items.result()
 
             relatorio = []
-            IDs_com_estoque_misturado = [] # Deixe vazio para não zerar os kits display
             chunks = [item_ids[i:i + 20] for i in range(0, len(item_ids), 20)]
             
             for chunk in chunks:
@@ -166,17 +164,32 @@ class handler(BaseHTTPRequestHandler):
                     estoque_full = int(item_data.get("available_quantity", 0))
                     preco = float(item_data.get("price", 0.0))
                     
-                    if item_id in IDs_com_estoque_misturado: estoque_full = 0
+                    # Identifica comissão com base no tipo de anúncio (gold_pro = Premium ~17-18%, gold_special = Clássico ~11-12%)
+                    listing_type = item_data.get("listing_type_id", "")
+                    comissao_perc = 17.5 if "pro" in listing_type else 12.0
+
+                    # Extrai custo de envio do Full se disponível na API de custos/shipping
+                    shipping_cost = 0.0
+                    try:
+                        shipping_info = item_data.get("shipping", {})
+                        # Se houver custo de frete gratis subsidiado ou tarifa fixa associada
+                        # O ML costuma expor isso no sale_fee ou shipping free
+                        free_shipping = shipping_info.get("free_shipping", False)
+                        # Caso queira refinar, podemos estimar ou puxar da API de fretes
+                    except:
+                        pass
 
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
 
                     relatorio.append({
+                        "id": item_id,
                         "titulo": titulo,
                         "estoque": estoque_full,
                         "vendas_7d": vendas_item["7d"],
                         "vendas_15d": vendas_item["15d"],
                         "vendas_30d": vendas_item["30d"],
-                        "preco": preco
+                        "preco": preco,
+                        "comissao_ml": comissao_perc
                     })
 
             self.send_response(200)
