@@ -255,13 +255,13 @@
                         regrasFabrica[p.titulo] = { 
                             material: Object.keys(catalogoChapas)[0] || "PS 2mm",
                             pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, 
-                            comissaoML: p.comissao_ml, custoEnvio: p.custo_envio_ml || 6.75, custoEmbalagem: 1.50
+                            comissaoML: p.comissao_ml, custoEnvio: 6.75, custoEmbalagem: 1.50
                         };
                         precisaAtualizarBanco = true;
                     } else {
-                        // Atualiza as taxas automáticas baseadas no Python
+                        // Atualiza APENAS a comissão com a leitura automática mais recente da API
                         regrasFabrica[p.titulo].comissaoML = p.comissao_ml;
-                        regrasFabrica[p.titulo].custoEnvio = p.custo_envio_ml || 6.75;
+                        // NÃO altera o custoEnvio! Mantém o valor que você preencheu e salvou no banco.
                     }
                 });
 
@@ -309,7 +309,7 @@
             const semanasCobertura = vendaDiaria > 0 ? (produto.estoque / (vendaDiaria * 7)) : 999.0;
             const enviar = Math.max(0, Math.round(estoqueIdeal - produto.estoque));
             
-            const regra = regrasFabrica[produto.titulo] || { material: "PS 2mm", pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: produto.comissao_ml || 11.5, custoEnvio: produto.custo_envio_ml || 6.75, custoEmbalagem: 1.5 };
+            const regra = regrasFabrica[produto.titulo] || { material: "PS 2mm", pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: produto.comissao_ml || 11.5, custoEnvio: 6.75, custoEmbalagem: 1.5 };
             
             const custoChapa = catalogoChapas[regra.material] || 0;
             const pecasTotais = enviar * (regra.isKit ? regra.pecasPorKit : 1);
@@ -602,7 +602,7 @@
             listaRegras.innerHTML = '';
 
             produtosGlobais.forEach((p, index) => {
-                const regra = regrasFabrica[p.titulo] || { material: Object.keys(catalogoChapas)[0], pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: p.comissao_ml || 11.5, custoEnvio: p.custo_envio_ml || 6.75, custoEmbalagem: 1.5 };
+                const regra = regrasFabrica[p.titulo] || { material: Object.keys(catalogoChapas)[0], pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: p.comissao_ml || 11.5, custoEnvio: 6.75, custoEmbalagem: 1.5 };
                 const displayKit = regra.isKit ? 'block' : 'hidden';
                 const checkedKit = regra.isKit ? 'checked' : '';
 
@@ -643,7 +643,7 @@
                                 <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Custos de Venda</p>
                             </div>
                             
-                            <!-- BLOQUEIOS VISUAIS: O Sistema trabalha por você -->
+                            <!-- COMISSÃO CONTINUA AUTOMÁTICA E BLOQUEADA -->
                             <div>
                                 <label class="block text-slate-400 mb-1">Comissão ML (%) [Auto]</label>
                                 <div class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-500 font-bold w-full cursor-not-allowed text-center">
@@ -652,12 +652,10 @@
                                 <input type="hidden" id="cfg-comissao-${index}" value="${regra.comissaoML}">
                             </div>
                             
+                            <!-- CUSTO DE ENVIO AGORA ESTÁ LIVRE PARA VOCÊ DIGITAR -->
                             <div>
-                                <label class="block text-slate-400 mb-1">Custo Envio Full (R$) [Auto]</label>
-                                <div class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-500 font-bold w-full cursor-not-allowed text-center">
-                                    R$ ${regra.custoEnvio}
-                                </div>
-                                <input type="hidden" id="cfg-envio-${index}" value="${regra.custoEnvio}">
+                                <label class="block text-slate-400 mb-1">Custo Envio Full (R$)</label>
+                                <input type="number" step="0.01" id="cfg-envio-${index}" value="${regra.custoEnvio}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
                             </div>
 
                             <div class="col-span-2">
