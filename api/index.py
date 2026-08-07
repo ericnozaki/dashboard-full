@@ -128,7 +128,6 @@ class handler(BaseHTTPRequestHandler):
                                 if dias_atras <= 15: vendas[item_id]["15d"] += qtd
                                 if dias_atras <= 7: vendas[item_id]["7d"] += qtd
 
-                                # CAPTURA DO PREÇO REAL: Grava o valor pago pelo cliente na venda mais recente
                                 if data_pedido > vendas[item_id]["data_ultimo_pedido"]:
                                     vendas[item_id]["ultimo_preco"] = preco_pago
                                     vendas[item_id]["data_ultimo_pedido"] = data_pedido
@@ -169,7 +168,10 @@ class handler(BaseHTTPRequestHandler):
                 for item_json in resp_detalhe.json():
                     if item_json.get("code") != 200: continue
                     item_data = item_json.get("body", {})
+                    
+                    # Garante que traz todos os anúncios ativos que estão no Full (Fulfillment)
                     if item_data.get("shipping", {}).get("logistic_type") != "fulfillment": continue
+                    if item_data.get("status") != "active": continue
 
                     item_id = item_data.get("id")
                     titulo = str(item_data.get("title", ""))
@@ -179,7 +181,7 @@ class handler(BaseHTTPRequestHandler):
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0, "ultimo_preco": 0.0})
                     ultimo_preco_venda = vendas_item.get("ultimo_preco", 0.0)
 
-                    # Se houve venda recente, ele puxa o preço exato que o cliente pagou na plataforma!
+                    # Se houve venda com desconto, usa o preço promocional. Se não, mantém o preço base do anúncio.
                     if ultimo_preco_venda > 0 and ultimo_preco_venda < preco_base:
                         preco_final = ultimo_preco_venda
                     else:
