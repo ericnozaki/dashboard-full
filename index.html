@@ -259,7 +259,7 @@
                         };
                         precisaAtualizarBanco = true;
                     } else {
-                        // Atualiza a comissão lida automaticamente
+                        // Atualiza a comissão com a leitura automática mais recente da API
                         regrasFabrica[p.titulo].comissaoML = p.comissao_ml;
                     }
                 });
@@ -601,7 +601,7 @@
             listaRegras.innerHTML = '';
 
             produtosGlobais.forEach((p, index) => {
-                const regra = regrasFabrica[p.titulo] || { material: Object.keys(catalogoChapas)[0], pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: p.comissao_ml || 14, custoEnvio: 15, custoEmbalagem: 1.5 };
+                const regra = regrasFabrica[p.titulo] || { material: Object.keys(catalogoChapas)[0], pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: p.comissao_ml || 11.5, custoEnvio: 15, custoEmbalagem: 1.5 };
                 const displayKit = regra.isKit ? 'block' : 'hidden';
                 const checkedKit = regra.isKit ? 'checked' : '';
 
@@ -641,10 +641,17 @@
                             <div class="col-span-2 mt-1 pt-2 border-t border-slate-700">
                                 <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Custos de Venda</p>
                             </div>
+                            
+                            <!-- COMISSÃO AGORA É APENAS LEITURA VISUAL (BLOQUEADA) -->
                             <div>
                                 <label class="block text-slate-400 mb-1">Comissão ML (%) [Auto]</label>
-                                <input type="number" step="0.1" id="cfg-comissao-${index}" value="${regra.comissaoML}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
+                                <div class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-500 font-bold w-full cursor-not-allowed text-center">
+                                    ${regra.comissaoML}%
+                                </div>
+                                <!-- Input oculto para manter o valor no salvamento -->
+                                <input type="hidden" id="cfg-comissao-${index}" value="${regra.comissaoML}">
                             </div>
+                            
                             <div>
                                 <label class="block text-slate-400 mb-1">Custo Envio Full (R$)</label>
                                 <input type="number" step="0.01" id="cfg-envio-${index}" value="${regra.custoEnvio}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
