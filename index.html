@@ -239,7 +239,7 @@
                     regrasFabrica = data.regras || {};
                 }
 
-                loadingEl.innerText = '🔄 Conectando à API do Mercado Livre...';
+                loadingEl.innerText = '🔄 Conectando à API do Mercado Livre (Puxando preços e promoções)...';
 
                 const response = await fetch('/api/index');
                 produtosGlobais = await response.json();
@@ -259,9 +259,7 @@
                         };
                         precisaAtualizarBanco = true;
                     } else {
-                        // Atualiza APENAS a comissão com a leitura automática mais recente da API
                         regrasFabrica[p.titulo].comissaoML = p.comissao_ml;
-                        // NÃO altera o custoEnvio! Mantém o valor que você preencheu e salvou no banco.
                     }
                 });
 
@@ -311,29 +309,31 @@
             
             const regra = regrasFabrica[produto.titulo] || { material: "PS 2mm", pecasPorPlaca: 440, tempoPorPlaca: 15, isKit: false, pecasPorKit: 1, comissaoML: produto.comissao_ml || 11.5, custoEnvio: 6.75, custoEmbalagem: 1.5 };
             
+            // O preço que vem do produto.preco já é o promocional capturado automaticamente pela API
+            const precoAtivo = produto.preco;
+
             const custoChapa = catalogoChapas[regra.material] || 0;
             const pecasTotais = enviar * (regra.isKit ? regra.pecasPorKit : 1);
             const placasUsadas = pecasTotais > 0 ? (pecasTotais / regra.pecasPorPlaca) : 0;
             const tempoMinutos = placasUsadas * regra.tempoPorPlaca;
 
-            const preco = produto.preco;
             const custoMatUnitario = regra.pecasPorPlaca > 0 ? (custoChapa / regra.pecasPorPlaca) : 0;
             const custoMaterialTotal = custoMatUnitario * (regra.isKit ? regra.pecasPorKit : 1);
             
-            const comissaoValor = preco * (regra.comissaoML / 100);
+            const comissaoValor = precoAtivo * (regra.comissaoML / 100);
             const custoEnvio = parseFloat(regra.custoEnvio) || 0;
-            const impostoValor = preco * (parseFloat(configApp.imposto) / 100);
+            const impostoValor = precoAtivo * (parseFloat(configApp.imposto) / 100);
             const embalagem = parseFloat(regra.custoEmbalagem) || 0;
 
             const custoTotalItem = custoMaterialTotal + comissaoValor + custoEnvio + impostoValor + embalagem;
-            const lucroLiquido = preco - custoTotalItem;
-            const margem = preco > 0 ? (lucroLiquido / preco) * 100 : 0;
+            const lucroLiquido = precoAtivo - custoTotalItem;
+            const margem = precoAtivo > 0 ? (lucroLiquido / precoAtivo) * 100 : 0;
             
             return { 
                 vendas, vendaDiaria, semanasCobertura, enviar, 
                 pecasTotais, placasUsadas, tempoMinutos, material: regra.material,
                 custoMaterialTotal, comissaoValor, custoEnvio, impostoValor, embalagem, 
-                custoTotalItem, lucroLiquido, margem
+                custoTotalItem, lucroLiquido, margem, precoAtivo
             };
         }
 
@@ -418,8 +418,8 @@
                     <h2 class="text-[12px] font-bold text-slate-200 leading-snug mb-2">${p.titulo}</h2>
                     <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700 text-center">
                         <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
-                            <span class="block text-[8px] text-slate-400 uppercase">Preço</span>
-                            <span class="text-[11px] font-bold text-slate-200">${formatarReal(p.preco)}</span>
+                            <span class="block text-[8px] text-slate-400 uppercase">Preço Ativo</span>
+                            <span class="text-[11px] font-bold text-emerald-400" title="Preço puxado automaticamente da promoção do ML">${formatarReal(met.precoAtivo)}</span>
                         </div>
                         <div class="bg-slate-900/50 p-1 rounded flex flex-col justify-center">
                             <span class="block text-[8px] text-slate-400 uppercase">Custo UN</span>
@@ -499,7 +499,7 @@
             produtosGlobais.forEach(p => {
                 const met = calcularMetricas(p);
                 totalKits += met.enviar;
-                totalValor += (met.enviar * p.preco);
+                totalValor += (met.enviar * met.precoAtivo);
 
                 const diasCobertura = met.semanasCobertura * 7;
                 let corSemaforo, textoSemaforo;
@@ -640,24 +640,21 @@
                                 <input type="number" id="cfg-qtdkit-${index}" value="${regra.pecasPorKit}" class="bg-slate-800 border border-emerald-600/50 rounded px-2 py-1 w-full text-white">
                             </div>
                             <div class="col-span-2 mt-1 pt-2 border-t border-slate-700">
-                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Custos de Venda</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Custos & Venda</p>
                             </div>
                             
-                            <!-- COMISSÃO CONTINUA AUTOMÁTICA E BLOQUEADA -->
                             <div>
                                 <label class="block text-slate-400 mb-1">Comissão ML (%) [Auto]</label>
-                                <div class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-500 font-bold w-full cursor-not-allowed text-center">
+                                <div class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-500 font-bold w-full cursor-not-allowed text-center h-[26px] flex items-center justify-center">
                                     ${regra.comissaoML}%
                                 </div>
                                 <input type="hidden" id="cfg-comissao-${index}" value="${regra.comissaoML}">
                             </div>
                             
-                            <!-- CUSTO DE ENVIO AGORA ESTÁ LIVRE PARA VOCÊ DIGITAR -->
                             <div>
                                 <label class="block text-slate-400 mb-1">Custo Envio Full (R$)</label>
                                 <input type="number" step="0.01" id="cfg-envio-${index}" value="${regra.custoEnvio}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
                             </div>
-
                             <div class="col-span-2">
                                 <label class="block text-slate-400 mb-1">Custo de Embalagem (R$)</label>
                                 <input type="number" step="0.01" id="cfg-embalagem-${index}" value="${regra.custoEmbalagem}" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 w-full text-white">
@@ -705,7 +702,7 @@
                     pecasPorKit: parseFloat(document.getElementById(`cfg-qtdkit-${index}`).value) || 1,
                     comissaoML: parseFloat(document.getElementById(`cfg-comissao-${index}`).value) || 0,
                     custoEnvio: parseFloat(document.getElementById(`cfg-envio-${index}`).value) || 0,
-                    custoEmbalagem: parseFloat(document.getElementById(`cfg-embalagem-${index}`).value) || 0
+                    custoEmbalagem: parseFloat(document.getElementById(`cfg-embalagem-${index}` ).value) || 0
                 };
             });
 
