@@ -164,9 +164,16 @@ class handler(BaseHTTPRequestHandler):
                     estoque_full = int(item_data.get("available_quantity", 0))
                     preco = float(item_data.get("price", 0.0))
                     
-                    # Taxas cravadas exatas (16.5% Premium e 11.5% Clássico)
                     listing_type = item_data.get("listing_type_id", "")
                     comissao_perc = 16.5 if "pro" in listing_type else 11.5
+
+                    # Lógica de Custo de Envio Automático para itens leves (Acrílico/MDF)
+                    # Abaixo de R$ 79: Taxa de processamento Full
+                    # Acima de R$ 79: Frete Grátis obrigatório
+                    if preco < 79.00:
+                        custo_envio_ml = 6.75
+                    else:
+                        custo_envio_ml = 18.45 # Média de frete grátis para pacotes pequenos/leves
 
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
 
@@ -178,7 +185,8 @@ class handler(BaseHTTPRequestHandler):
                         "vendas_15d": vendas_item["15d"],
                         "vendas_30d": vendas_item["30d"],
                         "preco": preco,
-                        "comissao_ml": comissao_perc
+                        "comissao_ml": comissao_perc,
+                        "custo_envio_ml": custo_envio_ml
                     })
 
             self.send_response(200)
