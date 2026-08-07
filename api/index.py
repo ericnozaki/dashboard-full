@@ -162,18 +162,26 @@ class handler(BaseHTTPRequestHandler):
                     item_id = item_data.get("id")
                     titulo = str(item_data.get("title", ""))
                     estoque_full = int(item_data.get("available_quantity", 0))
-                    preco = float(item_data.get("price", 0.0))
+                    preco_base = float(item_data.get("price", 0.0))
                     
+                    # Tenta buscar se o item possui preço promocional ativo na API de promoções do ML
+                    preco_final = preco_base
+                    try:
+                        resp_promo = session.get(f"https://api.mercadolibre.com/items/{item_id}/promotions", timeout=3)
+                        if resp_promo.status_code == 200:
+                            promo_data = resp_promo.json()
+                            # Verifica se existe promoção do tipo 'price_reduction' ou 'campaign' ativa com preço promocional
+                            if isinstance(promo_data, dict):
+                                promocoes_ativas = promo_data.get("promotions", []) or [promo_data]
+                                for p in promocoes_ativas:
+                                    if p.get("status") == "active" and p.get("price"):
+                                        preco_final = float(p.get("price"))
+                                        break
+                    except:
+                        pass
+
                     listing_type = item_data.get("listing_type_id", "")
                     comissao_perc = 16.5 if "pro" in listing_type else 11.5
-
-                    # Lógica de Custo de Envio Automático para itens leves (Acrílico/MDF)
-                    # Abaixo de R$ 79: Taxa de processamento Full
-                    # Acima de R$ 79: Frete Grátis obrigatório
-                    if preco < 79.00:
-                        custo_envio_ml = 6.75
-                    else:
-                        custo_envio_ml = 18.45 # Média de frete grátis para pacotes pequenos/leves
 
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0})
 
@@ -184,9 +192,8 @@ class handler(BaseHTTPRequestHandler):
                         "vendas_7d": vendas_item["7d"],
                         "vendas_15d": vendas_item["15d"],
                         "vendas_30d": vendas_item["30d"],
-                        "preco": preco,
-                        "comissao_ml": comissao_perc,
-                        "custo_envio_ml": custo_envio_ml
+                        "preco": preco_final,  # Já puxa o preço promocional automaticamente se houver
+                        "comissao_ml": comissao_perc
                     })
 
             self.send_response(200)
