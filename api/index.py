@@ -169,13 +169,14 @@ class handler(BaseHTTPRequestHandler):
                     if item_json.get("code") != 200: continue
                     item_data = item_json.get("body", {})
                     
-                    # FILTROS REMOVIDOS COMPLETAMENTE AQUI!
-                    # O sistema puxa 100% dos produtos agora, pausados ou ativos, Full ou envio próprio.
-
                     item_id = item_data.get("id")
                     titulo = str(item_data.get("title", ""))
                     estoque_full = int(item_data.get("available_quantity", 0))
                     preco_base = float(item_data.get("price", 0.0))
+                    
+                    # IDENTIFICA SE O ANÚNCIO ESTÁ NO FULL
+                    logistic_type = item_data.get("shipping", {}).get("logistic_type", "")
+                    is_full = (logistic_type == "fulfillment")
                     
                     vendas_item = vendas.get(item_id, {"7d": 0, "15d": 0, "30d": 0, "ultimo_preco": 0.0})
                     ultimo_preco_venda = vendas_item.get("ultimo_preco", 0.0)
@@ -196,7 +197,8 @@ class handler(BaseHTTPRequestHandler):
                         "vendas_15d": vendas_item["15d"],
                         "vendas_30d": vendas_item["30d"],
                         "preco": preco_final,
-                        "comissao_ml": comissao_perc
+                        "comissao_ml": comissao_perc,
+                        "is_full": is_full
                     })
 
             self.send_response(200)
